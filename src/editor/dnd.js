@@ -19,6 +19,7 @@ export function attachDnD(root, { onDrop }) {
     document.body.classList.remove('bt-dragging-active');
     window.removeEventListener('pointermove', onMove);
     window.removeEventListener('pointerup', onUp);
+    window.removeEventListener('pointercancel', cleanup);
     window.removeEventListener('keydown', onKey, true);
     state = null;
   }
@@ -92,6 +93,9 @@ export function attachDnD(root, { onDrop }) {
     state = { source: item, startX: e.clientX, startY: e.clientY, dragging: false, target: null };
     window.addEventListener('pointermove', onMove, { passive: false });
     window.addEventListener('pointerup', onUp);
+    // If anything cancels the pointer stream (a native image drag, a gesture the OS claims),
+    // drop the drag rather than leaving a ghost stuck to the cursor.
+    window.addEventListener('pointercancel', cleanup);
     window.addEventListener('keydown', onKey, true);
   });
 

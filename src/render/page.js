@@ -48,7 +48,7 @@ export function itemHtml(item, render, opts = {}) {
   // case printing it twice is just noise.
   const blankText = render.showLabels ? '' : `<span class="bt-blank-title">${escapeHtml(item.title || '?')}</span>`;
   const img = item.image
-    ? `<img class="bt-cover" src="${escapeHtml(item.image.src)}" alt="${escapeHtml(label)}" loading="lazy" decoding="async">`
+    ? `<img class="bt-cover" src="${escapeHtml(item.image.src)}" alt="${escapeHtml(label)}" loading="lazy" decoding="async" draggable="false">`
     : `<span class="bt-cover bt-cover-blank ${hueClass(item.id || item.title)}" aria-hidden="true">${blankText}</span>`;
   const caption = render.showLabels ? `<span class="bt-label">${escapeHtml(item.title)}</span>` : '';
   const inner = `${img}${caption}${cardHtml(item, render)}`;

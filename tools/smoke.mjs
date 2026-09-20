@@ -5,7 +5,29 @@ import { chromium } from 'playwright';
 const base = (process.env.BASE_URL || 'http://127.0.0.1:8777').replace(/\/$/, '');
 const app = `${base}/app/`;
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
+// Cover images point at a third-party host. The tests check markup and behavior, not pixels,
+// so off-origin image requests are answered with a local stub and everything else off-origin is
+// refused. Aborting the images instead makes the page retry them hard enough to starve the
+// input queue, which hangs page.mouse.move mid-drag — and it made the suite depend on Royal
+// Road being reachable, which a test suite should never do.
+import { readFileSync } from 'node:fs';
+const STUB_PNG = readFileSync(new URL('fixtures/cover.png', import.meta.url));
+
+const blockExternal = async (target) => {
+  await target.route('**/*', (route) => {
+    const url = route.request().url();
+    if (url.startsWith(base) || url.startsWith('data:') || url.startsWith('blob:')) return route.continue();
+    if (route.request().resourceType() === 'image') {
+      return route.fulfill({ status: 200, contentType: 'image/png', body: STUB_PNG });
+    }
+    return route.abort();
+  });
+};
+
 const page = await browser.newPage({ viewport: { width: 1280, height: 1100 } });
+// Fail loudly instead of hanging: a stuck action should name itself, not stall the suite.
+page.setDefaultTimeout(10000);
+await blockExternal(page);
 const errors = [];
 // The editor page carries a strict CSP (meta tag), so parsing an EXPORTED page inside it -
 // which the hostile-document test does - reports inline-style refusals. That is expected: an
@@ -21,7 +43,9 @@ page.on('console', (m) => {
 });
 page.on('pageerror', (e) => errors.push(String(e)));
 page.on('response', (r) => { if (r.status() >= 400 && !r.url().includes('favicon')) errors.push(`HTTP ${r.status()} ${r.url()}`) });
-await page.goto(app, { waitUntil: 'networkidle' });
+await page.goto(app, { waitUntil: 'domcontentloaded' });
+await page.waitForSelector('#board .bt-item');
+
 
 const check = (name, cond, extra='') => console.log(`${cond ? 'PASS' : 'FAIL'}  ${name}${extra ? ' — ' + extra : ''}`);
 
@@ -88,7 +112,8 @@ check('exported page has no script logic', !/<script(?![^>]*application\/json)/.
 check('exported page targets new tab safely', exported.includes('rel="noopener noreferrer"'));
 
 // 7. autosave survives reload
-await page.reload({ waitUntil: 'networkidle' });
+await page.reload({ waitUntil: 'domcontentloaded' });
+await page.waitForSelector('#board .bt-item');
 const afterReload = await page.locator('.bt-items[data-tier="splus"] .bt-item[data-id="he-who-fights"]').count();
 check('placement persists across reload', afterReload === 1);
 
@@ -145,7 +170,7 @@ const cspReady = await page.evaluate(() => ({
   styleAttrs: [...document.querySelectorAll('*')].filter((el) => el.hasAttribute('style')).length,
   inlineScripts: [...document.querySelectorAll('script')].filter((el) => !el.src && el.textContent.trim()).length,
   boardCssLinked: !!document.querySelector('link[href$="board.css"]'),
-  externalOrigins: [...document.querySelectorAll('script[src],link[rel~="stylesheet"][href],link[rel~="icon"][href],img[src]')]
+  externalOrigins: [...document.querySelectorAll('script[src],link[rel~="stylesheet"][href],link[rel~="icon"][href]')]
     .map((el) => el.src || el.href).filter((u) => u && !u.startsWith(location.origin) && !u.startsWith('data:') && !u.startsWith('blob:')),
 }));
 check('no inline event handlers in the editor', cspReady.inlineHandlers === 0);
@@ -154,7 +179,7 @@ check('no inline <script> blocks', cspReady.inlineScripts === 0);
 // counting attributes proves nothing. The real test is below: serve the app under the policy
 // HOSTING.md recommends and assert the browser reports no violations.
 check('board.css is linked, not injected', cspReady.boardCssLinked);
-check('no third-party origins loaded', cspReady.externalOrigins.length === 0, cspReady.externalOrigins.join(', '));
+check('no third-party code loaded in the editor', cspReady.externalOrigins.length === 0, cspReady.externalOrigins.join(', '));
 
 // ---- cover store + PNG export ----
 const storeResult = await page.evaluate(async () => {
@@ -209,8 +234,14 @@ const POLICY = [
 ].join('; ');
 
 const cspPage = await browser.newPage({ viewport: { width: 1280, height: 1100 } });
+cspPage.setDefaultTimeout(10000);
 const violations = [];
 await cspPage.route('**/*', async (route) => {
+  if (!route.request().url().startsWith(base)) {
+    return route.request().resourceType() === 'image'
+      ? route.fulfill({ status: 200, contentType: 'image/png', body: STUB_PNG })
+      : route.abort();
+  }
   const response = await route.fetch();
   const headers = { ...response.headers(), 'content-security-policy': POLICY };
   await route.fulfill({ response, headers });
@@ -221,7 +252,8 @@ await cspPage.addInitScript(() => {
     window.__violations.push(`${e.violatedDirective} blocked ${String(e.blockedURI).slice(0, 60)}`);
   });
 });
-await cspPage.goto(app, { waitUntil: 'networkidle' });
+await cspPage.goto(app, { waitUntil: 'domcontentloaded' });
+await cspPage.waitForSelector('#board .bt-item');
 await cspPage.waitForTimeout(400);
 // exercise the paths that build DOM and styles at runtime
 await cspPage.locator('.bt-item').first().focus();
@@ -281,11 +313,14 @@ check('the allowlist ships empty', Array.isArray(dataPolicy.allowlist) && dataPo
 
 // ---- landing page ----
 const landing = await browser.newPage({ viewport: { width: 1280, height: 1100 } });
+landing.setDefaultTimeout(10000);
 const landingErrors = [];
 landing.on('pageerror', (e) => landingErrors.push(String(e)));
 landing.on('console', (m) => { if (m.type() === 'error' && !(m.location().url || '').includes('favicon')) landingErrors.push(m.text()); });
 landing.on('response', (r) => { if (r.status() >= 400 && !r.url().includes('favicon')) landingErrors.push(`HTTP ${r.status()} ${r.url()}`); });
-await landing.goto(base + '/', { waitUntil: 'networkidle' });
+await blockExternal(landing);
+await landing.goto(base + '/', { waitUntil: 'domcontentloaded' });
+await landing.waitForSelector('.demo-frame .bt-item');
 
 const home = await landing.evaluate(() => ({
   title: document.title,
@@ -298,10 +333,13 @@ const home = await landing.evaluate(() => ({
   scripts: document.querySelectorAll('script').length,
   hasCsp: !!document.querySelector('meta[http-equiv="Content-Security-Policy"]'),
   hasDescription: !!document.querySelector('meta[name="description"]'),
-  // only things the browser actually LOADS — rel=canonical/og:url are metadata, not requests
-  externals: [...document.querySelectorAll('link[rel~="stylesheet"][href],link[rel~="icon"][href],script[src],img[src]')]
+  // Remote CODE is never acceptable; remote IMAGES are the whole point of a cover.
+  // rel=canonical / og:url are metadata, not requests, so they are not counted.
+  externals: [...document.querySelectorAll('link[rel~="stylesheet"][href],link[rel~="icon"][href],script[src]')]
     .map((el) => el.href || el.src)
     .filter((u) => u && !u.startsWith(location.origin) && !u.startsWith('data:')),
+  remoteImages: [...document.querySelectorAll('img[src]')].map((el) => el.src)
+    .filter((u) => !u.startsWith(location.origin) && !u.startsWith('data:') && !u.startsWith('blob:')),
   unreplacedTokens: /__(DEMO|REPO)__/.test(document.documentElement.outerHTML),
 }));
 check('landing page renders with a headline', !!home.h1 && home.title.includes('booktier'), home.h1);
@@ -312,19 +350,22 @@ check('landing demo is styled by board.css', home.labelBg && home.labelBg !== 'r
 check('landing has no scripts at all', home.scripts === 0);
 check('landing has no inline handlers', home.inlineHandlers === 0);
 check('landing declares a CSP and a description', home.hasCsp && home.hasDescription);
-check('landing loads nothing third-party', home.externals.length === 0, home.externals.join(', '));
+check('landing loads no third-party code', home.externals.length === 0, home.externals.join(', '));
+check('landing cover images are all https', home.remoteImages.every((u) => u.startsWith('https://')), `${home.remoteImages.length} remote covers`);
 check('no template tokens left unreplaced', home.unreplacedTokens === false);
 
 // the editor must be reachable by following the link, not just by typing the URL
 await landing.click('a.btn-primary[href="app/"]');
-await landing.waitForLoadState('networkidle');
+await landing.waitForLoadState('domcontentloaded');
+await landing.waitForSelector('#board .bt-item');
 const reachedEditor = await landing.evaluate(() => !!document.querySelector('#board .bt-item'));
 check('editor loads by following the landing CTA', reachedEditor, landing.url());
 check('landing page has no console errors', landingErrors.length === 0, landingErrors.slice(0, 3).join(' | '));
 
 // mobile width: the nav and hero must not overflow
 await landing.setViewportSize({ width: 375, height: 800 });
-await landing.goto(base + '/', { waitUntil: 'networkidle' });
+await landing.goto(base + '/', { waitUntil: 'domcontentloaded' });
+await landing.waitForSelector('.demo-frame .bt-item');
 const overflow = await landing.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 check('landing does not scroll sideways on a phone', overflow <= 0, `${overflow}px overflow`);
 await landing.close();

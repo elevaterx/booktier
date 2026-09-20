@@ -7,10 +7,10 @@
   "assets": {
     "directory": "."
   },
-  // Keep the free *.workers.dev URL on. It is the address to test against before DNS points at
-  // the custom domain, and a redeploy re-applies whatever this file says — so setting it here
-  // stops a later build from quietly turning it off.
-  "workers_dev": true,
+  // The site answers on booktier.org, so the free *.workers.dev URL is switched off: one public
+  // address, not two. Preview URLs stay on — they are per-branch and still useful before a merge.
+  // (They default to whatever workers_dev is, which is why this has to be set explicitly.)
+  "workers_dev": false,
   "preview_urls": true,
   // Custom domains declared here rather than clicked into the dashboard: `wrangler deploy`
   // creates them, and the config is version-controlled instead of living in someone's UI state.

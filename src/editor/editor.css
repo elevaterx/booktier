@@ -22,6 +22,9 @@ button.danger{color:#ff8080;border-color:#5a2a2a}
 .hint{color:var(--bt-muted);font-size:13px;margin:4px 0 16px}
 kbd{font:600 11px/1 ui-monospace,monospace;border:1px solid var(--bt-line);border-bottom-width:2px;border-radius:4px;padding:2px 4px}
 .board-host .bt-item{cursor:grab}
+/* A cover is an <img>, and browsers start their own image drag on pointerdown — which fires
+   pointercancel and kills ours. draggable="false" in the markup plus these two rules stop it. */
+.board-host .bt-cover{-webkit-user-drag:none;user-select:none;-webkit-touch-callout:none}
 
 /* Tier nudge buttons — shown on hover/focus with a mouse, always shown on touch. */
 .bt-moves{position:absolute;top:3px;right:3px;display:flex;flex-direction:column;gap:2px;opacity:0;transition:opacity .12s ease}
