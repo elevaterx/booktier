@@ -12,6 +12,13 @@
   // stops a later build from quietly turning it off.
   "workers_dev": true,
   "preview_urls": true,
+  // Custom domains declared here rather than clicked into the dashboard: `wrangler deploy`
+  // creates them, and the config is version-controlled instead of living in someone's UI state.
+  // Any pre-existing DNS record for these hostnames must be deleted first, or creation fails.
+  "routes": [
+    { "pattern": "booktier.org", "custom_domain": true },
+    { "pattern": "www.booktier.org", "custom_domain": true }
+  ],
   "observability": {
     "enabled": true
   }

@@ -1,7 +1,13 @@
 # Files in this repo that must NOT be uploaded as public site assets.
-# Same syntax as .gitignore. Without this, `wrangler deploy` uploads node_modules — including
-# a 127 MB workerd binary that exceeds the 25 MiB per-asset limit and fails the build.
+# Same syntax as .gitignore.
+#
+# Two things this prevents, both observed in real builds:
+#  - `.git` being served publicly — the build clones the repo, so .git/objects, .git/index and
+#    .git/config all land in the assets directory and get uploaded unless excluded.
+#  - node_modules being uploaded, which fails the build outright: it contains a 127 MB workerd
+#    binary and Cloudflare caps a single asset at 25 MiB.
 
+.git
 node_modules
 .wrangler
 tools
