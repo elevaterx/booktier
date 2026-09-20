@@ -6,6 +6,7 @@ import { save, load, debounce } from '../io/store.js';
 import { dataParam, loadFromUrl, readEmbedded } from '../io/loadUrl.js';
 import * as covers from '../io/covers.js';
 import { toPng } from '../export/png.js';
+import { toMarkdown } from '../export/markdown.js';
 
 const $ = (sel) => document.querySelector(sel);
 let doc = null;
@@ -246,6 +247,26 @@ function bind() {
   $('#title').addEventListener('input', (e) => { doc.title = e.target.value; persist(); });
   $('#subtitle').addEventListener('input', (e) => { doc.subtitle = e.target.value; persist(); });
   $('#labels').addEventListener('change', (e) => { doc.render.showLabels = e.target.checked; render(); });
+  $('#caption').addEventListener('input', (e) => { doc.render.caption = e.target.value; persist(); });
+
+  // Reddit renders markdown links, so this is the one share path where the links survive the
+  // post itself. Shown in a dialog as well as copied: clipboard writes can be refused, and a
+  // silent failure here looks like the button does nothing.
+  $('#btn-reddit').addEventListener('click', () => {
+    $('#mdout').value = toMarkdown(doc);
+    $('#mddialog').showModal();
+  });
+  $('#btn-md-copy').addEventListener('click', async () => {
+    const text = $('#mdout').value;
+    try {
+      await navigator.clipboard.writeText(text);
+      $('#btn-md-copy').textContent = 'Copied';
+      setTimeout(() => { $('#btn-md-copy').textContent = 'Copy to clipboard'; }, 1500);
+    } catch {
+      $('#mdout').select();
+      status('Clipboard refused — the text is selected, press Ctrl+C.', true);
+    }
+  });
 
   $('#itemform').addEventListener('submit', (e) => {
     if (e.submitter && e.submitter.value === 'delete') {
@@ -257,20 +278,48 @@ function bind() {
     saveItemForm(e.currentTarget);
   });
 
+  // One book per set of fields, with the bulk paste kept as a secondary path. Both are read on
+  // submit: whichever is filled in gets added, so a pasted batch and a typed entry can go
+  // together without the user choosing a mode first.
   $('#addform').addEventListener('submit', (e) => {
     e.preventDefault();
-    const records = parseBulk(e.currentTarget.querySelector('[name=bulk]').value);
-    if (!records.length) { status('Nothing to add — one item per line.', true); return; }
+    const form = e.currentTarget;
+    const value = (n) => form.querySelector(`[name=${n}]`).value.trim();
+    const records = [];
+
+    if (value('title')) {
+      records.push({
+        title: value('title'),
+        byline: value('byline'),
+        href: value('href'),
+        image: value('cover') ? { src: value('cover') } : null,
+      });
+    }
+    records.push(...parseBulk(value('bulk')));
+
+    if (!records.length) { status('Add a title, or paste a list.', true); return; }
     addItems(records);
-    e.currentTarget.reset();
-    $('#adddialog').close();
+
+    const again = e.submitter && e.submitter.value === 'again';
+    form.reset();
+    if (again) {
+      $('#addcount').textContent = `Added ${records.length}. Keep going.`;
+      form.querySelector('[name=title]').focus();
+    } else {
+      $('#addcount').textContent = '';
+      $('#adddialog').close();
+    }
   });
 
   for (const button of document.querySelectorAll('[data-close]')) {
     button.addEventListener('click', () => button.closest('dialog').close());
   }
 
-  $('#btn-add').addEventListener('click', () => $('#adddialog').showModal());
+  $('#btn-add').addEventListener('click', () => {
+    $('#addcount').textContent = '';
+    $('#adddialog').showModal();
+    $('#addform [name=title]').focus();
+  });
   $('#btn-import').addEventListener('click', () => $('#file').click());
   $('#file').addEventListener('change', (e) => { if (e.target.files[0]) importFile(e.target.files[0]); e.target.value = ''; });
   $('#btn-covers').addEventListener('click', () => saveCovers());
@@ -345,6 +394,7 @@ async function boot() {
   }
   if (!doc) doc = createDoc({ title: 'My tier list', render: { ...DEFAULT_RENDER } });
   $('#labels').checked = !!doc.render.showLabels;
+  $('#caption').value = doc.render.caption || '';
   bind();
   render();
   covers.stats().then(({ count, bytes }) => {

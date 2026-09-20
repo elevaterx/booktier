@@ -44,6 +44,7 @@ body.bt-dragging-active{cursor:grabbing;user-select:none}
 .bt-marker{flex:0 0 3px;align-self:stretch;min-height:calc(var(--bt-cover-w)*1.5);background:#6ea8fe;border-radius:2px}
 
 .dlg-wide{width:min(1000px,94vw)}
+#mdout{width:100%;font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;resize:vertical}
 .preview-body{max-height:min(66vh,600px);overflow:auto;padding:12px;border:1px solid var(--bt-line);border-radius:8px;background:var(--bt-bg)}
 
 /* dialogs */
@@ -55,4 +56,8 @@ body.bt-dragging-active{cursor:grabbing;user-select:none}
 .dlg small{display:block;margin-top:4px;color:var(--bt-muted)}
 .dlg-hint{color:var(--bt-muted);font-size:13px;margin:0 0 10px}
 .dlg menu{display:flex;gap:8px;align-items:center;padding:0;margin:14px 0 0}
+#bulkbox{margin:14px 0 0;border-top:1px solid var(--bt-line);padding-top:10px}
+#bulkbox summary{cursor:pointer;color:var(--bt-muted);font-size:13px}
+#bulkbox summary:hover{color:var(--bt-fg)}
+#addcount{margin:2px 0 0;min-height:18px;color:#7fd18f}
 .dlg menu .spacer{flex:1}

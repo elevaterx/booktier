@@ -19,6 +19,7 @@
     <button id="btn-preview" type="button">Preview page</button>
     <button id="btn-html" type="button" class="primary">Export page</button>
     <button id="btn-png" type="button">Export image</button>
+    <button id="btn-reddit" type="button">Copy for Reddit</button>
     <button id="btn-json" type="button">Export JSON</button>
     <button id="btn-reset" type="button" class="ghost">Reset</button>
     <input id="file" type="file" accept=".json,.html" hidden>
@@ -31,6 +32,8 @@
     <input id="subtitle" class="sub-input" aria-label="Subtitle" placeholder="Subtitle (optional)">
     <label class="check"><input type="checkbox" id="labels"> Show titles under covers</label>
     <label class="check"><input type="checkbox" id="inline-covers"> Bake covers into exported page</label>
+    <input id="caption" class="sub-input" aria-label="Caption printed on the exported image"
+           placeholder="Caption for the image (your link, handle…)">
   </div>
 
   <p class="hint">Drag a cover to rank it, or use the ▲▼ buttons on it. Click one to edit its
@@ -67,6 +70,18 @@
   </form>
 </dialog>
 
+<dialog id="mddialog" class="dlg dlg-wide">
+  <h2>Markdown for Reddit</h2>
+  <p class="dlg-hint">Every title stays a link when pasted into a Reddit post — no image, no
+  external page needed.</p>
+  <textarea id="mdout" rows="14" readonly></textarea>
+  <menu>
+    <button type="button" data-close>Close</button>
+    <span class="spacer"></span>
+    <button type="button" id="btn-md-copy" class="primary">Copy to clipboard</button>
+  </menu>
+</dialog>
+
 <dialog id="previewdialog" class="dlg dlg-wide">
   <h2>Page preview</h2>
   <p class="dlg-hint">Covers are links here, exactly as in the exported file. Hover or tab to a
@@ -80,13 +95,25 @@
 
 <dialog id="adddialog" class="dlg">
   <form id="addform">
-    <h2>Add books</h2>
-    <p class="dlg-hint">One per line: <code>Title | Author | link | cover image URL</code>.
-    Tabs or commas work too. Everything after the title is optional.</p>
-    <textarea name="bulk" rows="8" placeholder="The Primal Hunter | Zogarth | https://… | covers/primal-hunter.jpg"></textarea>
+    <h2>Add a book</h2>
+    <label>Title<input name="title" required placeholder="The Primal Hunter"></label>
+    <label>Author<input name="byline" placeholder="Zogarth"></label>
+    <label>Link<input name="href" placeholder="https://… (Amazon, Royal Road, Goodreads)"></label>
+    <label>Cover image URL<input name="cover" placeholder="https://… or covers/book.jpg"></label>
+    <p id="addcount" class="dlg-hint"></p>
+
+    <details id="bulkbox">
+      <summary>Paste several at once</summary>
+      <p class="dlg-hint">One per line: <code>Title | Author | link | cover image URL</code>.
+      Tabs or commas work too; everything after the title is optional.</p>
+      <textarea name="bulk" rows="6" placeholder="The Primal Hunter | Zogarth | https://… | https://…"></textarea>
+    </details>
+
     <menu>
-      <button type="button" data-close>Cancel</button>
-      <button type="submit" class="primary">Add</button>
+      <button type="button" data-close>Close</button>
+      <span class="spacer"></span>
+      <button type="submit" value="again">Add another</button>
+      <button type="submit" value="done" class="primary">Add and close</button>
     </menu>
   </form>
 </dialog>

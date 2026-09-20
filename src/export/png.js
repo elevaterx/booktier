@@ -122,7 +122,7 @@ export async function toPng(doc, { scale = 2, credit = true } = {}) {
     const itemH = S.coverH + (doc.render.showLabels ? S.captionSize * 2.6 : 0);
     return Math.max(itemH + S.pad * 2, lines * itemH + (lines - 1) * S.gap + S.pad * 2);
   });
-  const footerH = credit ? S.subSize * 2.4 : S.pad;
+  const footerH = (credit || (doc.render && doc.render.caption)) ? S.subSize * 2.4 : S.pad;
   const height = headerH + rowHeights.reduce((a, b) => a + b + S.rowGap, 0) + footerH;
 
   const canvas = document.createElement('canvas');
@@ -189,12 +189,22 @@ export async function toPng(doc, { scale = 2, credit = true } = {}) {
     y += rowH + S.rowGap;
   });
 
-  if (credit) {
-    ctx.fillStyle = THEME.muted;
-    ctx.font = `${S.subSize * 0.8}px system-ui, sans-serif`;
-    ctx.textAlign = 'left';
+  // The image is what gets reposted, so whatever the user put in `caption` rides along with it.
+  const caption = (doc.render && doc.render.caption) || '';
+  if (caption || credit) {
     ctx.textBaseline = 'top';
-    ctx.fillText('made with booktier', S.pad, y + S.pad * 0.2);
+    if (caption) {
+      ctx.fillStyle = THEME.text;
+      ctx.font = `600 ${S.subSize * 0.95}px system-ui, sans-serif`;
+      ctx.textAlign = 'left';
+      ctx.fillText(caption, S.pad, y + S.pad * 0.2);
+    }
+    if (credit) {
+      ctx.fillStyle = THEME.muted;
+      ctx.font = `${S.subSize * 0.75}px system-ui, sans-serif`;
+      ctx.textAlign = caption ? 'right' : 'left';
+      ctx.fillText('booktier.org', caption ? S.boardW - S.pad : S.pad, y + S.pad * 0.3);
+    }
   }
 
   for (const bitmap of bitmaps.values()) if (bitmap.close) bitmap.close();

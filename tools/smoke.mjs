@@ -127,6 +127,83 @@ const rejected = await page.evaluate(async () => {
 check('javascript: URLs are stripped', rejected.href === '');
 check('unknown tier reference is caught by validate()', rejected.ok === false, rejected.errs.join('; '));
 
+// ---- add dialog: one book per field set ----
+const beforeAdd = await page.locator('#board .bt-item').count();
+await page.click('#btn-add');
+await page.waitForSelector('#adddialog[open]');
+await page.fill('#addform [name=title]', 'Typed Entry');
+await page.fill('#addform [name=byline]', 'A Writer');
+await page.fill('#addform [name=href]', 'example.org/book');
+await page.fill('#addform [name=cover]', '../tools/fixtures/cover.png');
+await page.click('#addform button[value=again]');
+await page.waitForTimeout(700); // autosave debounce
+const afterAgain = {
+  count: await page.locator('#board .bt-item').count(),
+  dialogOpen: await page.evaluate(() => !!document.querySelector('#adddialog[open]')),
+  titleCleared: await page.inputValue('#addform [name=title]'),
+  item: await page.evaluate(() => {
+    const d = JSON.parse(localStorage.getItem('booktier/v1/doc') || '{}');
+    const i = (d.items || []).find((x) => x.title === 'Typed Entry');
+    return i ? { byline: i.byline, href: i.href, cover: i.image && i.image.src, tier: i.tier } : null;
+  }),
+};
+check('typed entry adds one item with all four fields', afterAgain.count === beforeAdd + 1
+  && afterAgain.item && afterAgain.item.byline === 'A Writer'
+  && afterAgain.item.href === 'https://example.org/book'
+  && afterAgain.item.cover === '../tools/fixtures/cover.png', JSON.stringify(afterAgain.item));
+check('"Add another" keeps the dialog open and clears the form', afterAgain.dialogOpen && afterAgain.titleCleared === '');
+check('a new item lands unranked', afterAgain.item && afterAgain.item.tier === null);
+
+await page.fill('#addform [name=title]', 'Second Entry');
+await page.click('#addform button[value=done]');
+await page.waitForTimeout(700);
+check('"Add and close" adds and closes', await page.locator('#board .bt-item').count() === beforeAdd + 2
+  && !(await page.evaluate(() => !!document.querySelector('#adddialog[open]'))));
+
+// ---- Reddit markdown + image caption ----
+const md = await page.evaluate(async () => {
+  const { toMarkdown } = await import('../src/export/markdown.js');
+  const s = await import('../src/core/schema.js');
+  const doc = s.createDoc({
+    title: 'My list',
+    tiers: [{ id: 'a', label: 'A*', color: '#ffdf7f' }, { id: 'b', label: 'B', color: '#ffff7f' }],
+    items: [
+      { title: 'Linked [Book]', tier: 'a', href: 'https://example.com/a(b)' },
+      { title: 'No link here', tier: 'a' },
+      { title: 'Lower one', tier: 'b', href: 'https://example.com/z' },
+      { title: 'Not placed', tier: null },
+    ],
+    render: { caption: 'booktier.org/lists/mine' },
+  });
+  return toMarkdown(doc);
+});
+check('markdown links every item that has a link', (md.match(/\]\(https/g) || []).length === 2, JSON.stringify(md.slice(0, 80)));
+check('markdown escapes brackets in titles', md.includes('Linked \\[Book\\]'));
+check('markdown percent-encodes parentheses in URLs', md.includes('example.com/a%28b%29'));
+check('markdown keeps unlinked items as plain text', /No link here(?!\])/.test(md));
+check('markdown groups by tier with counts', md.includes('**A\\***') && md.includes('(2)'));
+check('markdown lists unranked separately', /Unranked \(1\)/.test(md));
+check('markdown carries the caption', md.includes('booktier.org/lists/mine'));
+
+const captionUi = await page.evaluate(async () => {
+  document.querySelector('#caption').value = 'my caption';
+  document.querySelector('#caption').dispatchEvent(new Event('input'));
+  await new Promise((r) => setTimeout(r, 700));
+  const stored = JSON.parse(localStorage.getItem('booktier/v1/doc') || '{}');
+  return stored.render ? stored.render.caption : null;
+});
+check('caption persists with the document', captionUi === 'my caption', String(captionUi));
+
+const withCaption = await page.evaluate(async () => {
+  const s = await import('../src/core/schema.js');
+  const { toPng } = await import('../src/export/png.js');
+  const base = { title: 'T', items: [{ title: 'x', tier: 'splus' }] };
+  const plain = await toPng(s.createDoc(base), { scale: 1 });
+  const capped = await toPng(s.createDoc({ ...base, render: { caption: 'booktier.org/lists/mine' } }), { scale: 1 });
+  return { plainH: plain.height, cappedH: capped.height, cappedBytes: capped.blob.size };
+});
+check('caption renders into the exported image', withCaption.cappedBytes > 1000 && withCaption.cappedH >= withCaption.plainH, JSON.stringify(withCaption));
+
 // ---- security: hostile document must not become markup ----
 const hostile = await page.evaluate(async () => {
   const s = await import('../src/core/schema.js');

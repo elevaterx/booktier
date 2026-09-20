@@ -17,6 +17,9 @@ export const DEFAULT_RENDER = {
   rel: 'noopener noreferrer',
   showLabels: false,
   fieldOrder: [],         // which `fields` keys to show in the hover card, in order
+  caption: '',            // printed at the foot of the exported image — the user's own URL or
+                          // handle, so the picture points somewhere once it is reposted.
+                          // Empty by default: nobody should leak an address they did not choose.
 };
 
 let counter = 0;
