@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' https: data: blob:; connect-src 'self' https:; font-src 'self'; base-uri 'none'; form-action 'none'">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%232b5cd7'/%3E%3Crect x='3' y='3' width='4' height='10' rx='1' fill='%23fff'/%3E%3Crect x='9' y='6' width='4' height='7' rx='1' fill='%23fff'/%3E%3C/svg%3E">
+<title>booktier — tier lists where every cover is a link</title>
+<meta name="description" content="Rank books, then publish a page where every cover links to the book and hovering shows the title and author. No account, no server, your own file.">
+<meta property="og:title" content="booktier">
+<meta property="og:description" content="Tier lists where every cover is a link.">
+<meta property="og:type" content="website">
+<link rel="stylesheet" href="src/render/board.css">
+<link rel="stylesheet" href="src/site/landing.css">
+<link rel="stylesheet" href="src/site/demo.css">
+</head>
+<body>
+
+<header class="nav">
+  <span class="brand">booktier</span>
+  <nav class="navlinks">
+    <a href="#how">How it works</a>
+    <a href="#host">Self-host</a>
+    <a href="https://github.com/elevaterx/booktier">GitHub</a>
+    <a class="btn btn-primary" href="app/">Open the editor</a>
+  </nav>
+</header>
+
+<main>
+
+<section class="hero">
+  <h1>Tier lists where every cover is a link.</h1>
+  <p class="lede">Rank your books, then publish a page. Each cover links to wherever the book
+  actually lives — Amazon, Royal Road, Goodreads, your own review — and hovering or tabbing to one
+  shows the title, the author, and whatever else you tracked. Not a screenshot of a ranking.</p>
+  <p class="cta">
+    <a class="btn btn-primary btn-lg" href="app/">Open the editor</a>
+    <a class="btn btn-lg" href="https://github.com/elevaterx/booktier">Source on GitHub</a>
+  </p>
+  <p class="micro">Free, MIT-licensed, runs entirely in your browser. No account, nothing uploaded.</p>
+</section>
+
+<section class="demo" aria-labelledby="demo-h">
+  <h2 id="demo-h" class="section-h">This is the output</h2>
+  <p class="section-p">A real exported board, not a picture of one. Hover a cover — or press Tab to
+  walk them with the keyboard — and click through to the book.</p>
+  <div class="demo-frame">
+<div class="bt-board"><div class="bt-row" data-tier="splus"><div class="bt-rowlabel" data-color="#ff7f7f"><span>S+</span></div><div class="bt-items" data-tier="splus"><a class="bt-item" data-id="primal-hunter" href="https://www.royalroad.com/fiction/36049/the-primal-hunter" target="_blank" rel="noopener noreferrer"><span class="bt-cover bt-cover-blank bt-h5" aria-hidden="true"><span class="bt-blank-title">The Primal Hunter</span></span><span class="bt-card" role="presentation"><span class="bt-card-title">The Primal Hunter</span><span class="bt-card-byline">Zogarth</span><span class="bt-card-fields"><span class="bt-field"><b>origin</b> Royal Road</span></span><span class="bt-card-note">System apocalypse, heavy stat focus.</span></span></a><a class="bt-item" data-id="beware-chicken" href="https://www.royalroad.com/fiction/39408/beware-of-chicken" target="_blank" rel="noopener noreferrer"><span class="bt-cover bt-cover-blank bt-h7" aria-hidden="true"><span class="bt-blank-title">Beware of Chicken</span></span><span class="bt-card" role="presentation"><span class="bt-card-title">Beware of Chicken</span><span class="bt-card-byline">CasualFarmer</span><span class="bt-card-fields"><span class="bt-field"><b>origin</b> Royal Road</span></span><span class="bt-card-note">Cultivation, but the farm is the point.</span></span></a></div></div><div class="bt-row" data-tier="s"><div class="bt-rowlabel" data-color="#ffbf7f"><span>S</span></div><div class="bt-items" data-tier="s"><a class="bt-item" data-id="mother-of-learning" href="https://www.royalroad.com/fiction/21220/mother-of-learning" target="_blank" rel="noopener noreferrer"><span class="bt-cover bt-cover-blank bt-h5" aria-hidden="true"><span class="bt-blank-title">Mother of Learning</span></span><span class="bt-card" role="presentation"><span class="bt-card-title">Mother of Learning</span><span class="bt-card-byline">nobody103</span><span class="bt-card-fields"><span class="bt-field"><b>origin</b> Royal Road</span></span><span class="bt-card-note">Time loop, tightly plotted.</span></span></a><a class="bt-item" data-id="super-supportive" href="https://www.royalroad.com/fiction/64288/super-supportive" target="_blank" rel="noopener noreferrer"><span class="bt-cover bt-cover-blank bt-h4" aria-hidden="true"><span class="bt-blank-title">Super Supportive</span></span><span class="bt-card" role="presentation"><span class="bt-card-title">Super Supportive</span><span class="bt-card-byline">Sleyca</span><span class="bt-card-fields"><span class="bt-field"><b>origin</b> Royal Road</span></span></span></a></div></div><div class="bt-row" data-tier="a"><div class="bt-rowlabel" data-color="#ffdf7f"><span>A</span></div><div class="bt-items" data-tier="a"><a class="bt-item" data-id="defiance-of-the-fall" href="https://www.royalroad.com/fiction/33844/defiance-of-the-fall" target="_blank" rel="noopener noreferrer"><span class="bt-cover bt-cover-blank bt-h2" aria-hidden="true"><span class="bt-blank-title">Defiance of the Fall</span></span><span class="bt-card" role="presentation"><span class="bt-card-title">Defiance of the Fall</span><span class="bt-card-byline">TheFirstDefier</span><span class="bt-card-fields"><span class="bt-field"><b>origin</b> Royal Road</span></span></span></a><a class="bt-item" data-id="azarinth-healer" href="https://www.royalroad.com/fiction/24709/azarinth-healer" target="_blank" rel="noopener noreferrer"><span class="bt-cover bt-cover-blank bt-h4" aria-hidden="true"><span class="bt-blank-title">Azarinth Healer</span></span><span class="bt-card" role="presentation"><span class="bt-card-title">Azarinth Healer</span><span class="bt-card-byline">Rhaegar</span><span class="bt-card-fields"><span class="bt-field"><b>origin</b> Royal Road</span></span></span></a></div></div><div class="bt-row" data-tier="b"><div class="bt-rowlabel" data-color="#ffff7f"><span>B</span></div><div class="bt-items" data-tier="b"><a class="bt-item" data-id="he-who-fights" href="https://www.royalroad.com/fiction/26294/he-who-fights-with-monsters" target="_blank" rel="noopener noreferrer"><span class="bt-cover bt-cover-blank bt-h5" aria-hidden="true"><span class="bt-blank-title">He Who Fights with Monsters</span></span><span class="bt-card" role="presentation"><span class="bt-card-title">He Who Fights with Monsters</span><span class="bt-card-byline">Shirtaloon</span><span class="bt-card-fields"><span class="bt-field"><b>origin</b> Royal Road</span></span></span></a></div></div></div>
+  </div>
+</section>
+
+<section class="features" aria-labelledby="features-h">
+  <h2 id="features-h" class="section-h">What you get</h2>
+  <div class="grid">
+    <article class="card">
+      <h3>Covers that do something</h3>
+      <p>Every cover is a real link with a real hover card. Keyboard users get the card on focus,
+      not just on mouse hover — which is more than most tier list tools manage.</p>
+    </article>
+    <article class="card">
+      <h3>Three ways out</h3>
+      <p>A standalone HTML page you can host anywhere, a JSON file you own and can re-import, and
+      a PNG for pasting into Reddit or Discord. The page and the JSON round-trip.</p>
+    </article>
+    <article class="card">
+      <h3>Covers saved once</h3>
+      <p>Cover images are fetched once and kept locally, so lists keep working after a retailer
+      rotates its image URLs — and so image export works at all.</p>
+    </article>
+    <article class="card">
+      <h3>Any book, any link</h3>
+      <p>No catalog to be in. If you can point at a cover and a URL, you can rank it — including
+      a serial with no ISBN, a Patreon chapter, or something you wrote.</p>
+    </article>
+    <article class="card">
+      <h3>Nothing leaves the browser</h3>
+      <p>No account, no server, no analytics, no third-party scripts. Your lists live in your
+      browser and in the files you export.</p>
+    </article>
+    <article class="card">
+      <h3>Fields you choose</h3>
+      <p>Add whatever you track — hours read, volume count, where you dropped it — and it shows in
+      the hover card. The format does not dictate what you care about.</p>
+    </article>
+  </div>
+</section>
+
+<section id="how" class="how" aria-labelledby="how-h">
+  <h2 id="how-h" class="section-h">How it works</h2>
+  <ol class="steps">
+    <li><b>Add your books.</b> One per line: title, author, link, cover URL. Paste a batch at once.</li>
+    <li><b>Rank them.</b> Drag covers between tiers, or move them from the keyboard.</li>
+    <li><b>Save covers.</b> One press stores every cover locally so the list stays put and image
+    export works.</li>
+    <li><b>Export.</b> A page to host, a JSON file to keep, or a PNG to paste.</li>
+  </ol>
+</section>
+
+<section class="honest" aria-labelledby="honest-h">
+  <h2 id="honest-h" class="section-h">Is this the right tool for you?</h2>
+  <div class="two-up">
+    <div>
+      <h3>Use booktier if</h3>
+      <ul>
+        <li>You want the finished thing to be a page you own and host, not a post on someone's site.</li>
+        <li>Your links should go where you say — a specific chapter, a review, a store page.</li>
+        <li>You rank things no catalog has.</li>
+        <li>You would rather not make an account.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Use something else if</h3>
+      <ul>
+        <li>You want your list discovered by a community that is already there —
+        <a href="https://www.litrpgtools.com/tier-lists">LitRPGTools</a> does linked covers with
+        hover cards inside a LitRPG community, and that reach is worth more than owning the file.</li>
+        <li>You want a consensus ranking across many people's lists.</li>
+        <li>You want an image and nothing else — any tier list maker does that.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="host" class="host" aria-labelledby="host-h">
+  <h2 id="host-h" class="section-h">Run your own copy</h2>
+  <p class="section-p">booktier is static files — no build step, no runtime, no database. Clone it,
+  put it behind any web server, done.</p>
+  <pre class="code"><code>git clone https://github.com/elevaterx/booktier.git
+cd booktier
+npm run serve     # http://localhost:8777</code></pre>
+  <p class="section-p">The repository ships a <a href="https://github.com/elevaterx/booktier/blob/main/HOSTING.md">hosting
+  guide</a> with response headers and per-host recipes, and a
+  <a href="https://github.com/elevaterx/booktier/blob/main/SECURITY.md">security document</a> covering trust boundaries and the
+  decisions worth making before you put a copy online. The Content-Security-Policy in that guide is
+  enforced against a live browser by the test suite, not just recommended.</p>
+</section>
+
+</main>
+
+<footer class="foot">
+  <p>MIT licensed. Built after reading nine other open-source tier list projects —
+  <a href="https://github.com/elevaterx/booktier/blob/main/CREDITS.md">credits</a> names each one and what was taken from it.</p>
+  <p><a href="https://github.com/elevaterx/booktier">GitHub</a> · <a href="app/">Editor</a></p>
+</footer>
+
+</body>
+</html>

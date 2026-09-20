@@ -1,0 +1,34 @@
+{
+  "schema": "booktier/v1",
+  "title": "LitRPG — a starting shelf",
+  "subtitle": "Example data. Replace it with your own: Add books, or Import a JSON file.",
+  "tiers": [
+    { "id": "splus", "label": "S+", "color": "#ff7f7f" },
+    { "id": "s", "label": "S", "color": "#ffbf7f" },
+    { "id": "a", "label": "A", "color": "#ffdf7f" },
+    { "id": "b", "label": "B", "color": "#ffff7f" },
+    { "id": "c", "label": "C", "color": "#bfff7f" }
+  ],
+  "items": [
+    { "id": "primal-hunter", "tier": "splus", "pos": 0, "title": "The Primal Hunter", "byline": "Zogarth",
+      "href": "https://www.royalroad.com/fiction/36049/the-primal-hunter", "note": "System apocalypse, heavy stat focus.",
+      "fields": { "origin": "Royal Road" } },
+    { "id": "beware-chicken", "tier": "splus", "pos": 1, "title": "Beware of Chicken", "byline": "CasualFarmer",
+      "href": "https://www.royalroad.com/fiction/39408/beware-of-chicken", "note": "Cultivation, but the farm is the point.",
+      "fields": { "origin": "Royal Road" } },
+    { "id": "mother-of-learning", "tier": "s", "pos": 0, "title": "Mother of Learning", "byline": "nobody103",
+      "href": "https://www.royalroad.com/fiction/21220/mother-of-learning", "note": "Time loop, tightly plotted.",
+      "fields": { "origin": "Royal Road" } },
+    { "id": "super-supportive", "tier": "s", "pos": 1, "title": "Super Supportive", "byline": "Sleyca",
+      "href": "https://www.royalroad.com/fiction/64288/super-supportive", "fields": { "origin": "Royal Road" } },
+    { "id": "defiance-of-the-fall", "tier": "a", "pos": 0, "title": "Defiance of the Fall", "byline": "TheFirstDefier",
+      "href": "https://www.royalroad.com/fiction/33844/defiance-of-the-fall", "fields": { "origin": "Royal Road" } },
+    { "id": "azarinth-healer", "tier": "a", "pos": 1, "title": "Azarinth Healer", "byline": "Rhaegar",
+      "href": "https://www.royalroad.com/fiction/24709/azarinth-healer", "fields": { "origin": "Royal Road" } },
+    { "id": "he-who-fights", "tier": "b", "pos": 0, "title": "He Who Fights with Monsters", "byline": "Shirtaloon",
+      "href": "https://www.royalroad.com/fiction/26294/he-who-fights-with-monsters", "fields": { "origin": "Royal Road" } },
+    { "id": "randidly-ghosthound", "tier": null, "pos": 0, "title": "Randidly Ghosthound", "byline": "Puddles4263",
+      "href": "https://www.royalroad.com/fiction/24229/the-legend-of-randidly-ghosthound" }
+  ],
+  "render": { "tooltip": "card", "target": "_blank", "rel": "noopener noreferrer", "showLabels": true, "fieldOrder": [] }
+}

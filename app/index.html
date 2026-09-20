@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' https: data: blob:; connect-src 'self' https:; font-src 'self'; frame-src 'self' blob:; base-uri 'none'; form-action 'none'">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%232b5cd7'/%3E%3Crect x='3' y='3' width='4' height='10' rx='1' fill='%23fff'/%3E%3Crect x='9' y='6' width='4' height='7' rx='1' fill='%23fff'/%3E%3C/svg%3E">
+<title>Editor — booktier</title>
+<link rel="stylesheet" href="../src/render/board.css">
+<link rel="stylesheet" href="../src/editor/editor.css">
+</head>
+<body>
+<header class="app-head">
+  <a class="brand" href="../">booktier</a>
+  <div class="toolbar">
+    <button id="btn-add" type="button">Add books</button>
+    <button id="btn-import" type="button">Import…</button>
+    <button id="btn-covers" type="button">Save covers</button>
+    <button id="btn-preview" type="button">Preview page</button>
+    <button id="btn-html" type="button" class="primary">Export page</button>
+    <button id="btn-png" type="button">Export image</button>
+    <button id="btn-json" type="button">Export JSON</button>
+    <button id="btn-reset" type="button" class="ghost">Reset</button>
+    <input id="file" type="file" accept=".json,.html" hidden>
+  </div>
+</header>
+
+<main class="app-main">
+  <div class="meta">
+    <input id="title" class="title-input" aria-label="Tier list title" placeholder="Tier list title">
+    <input id="subtitle" class="sub-input" aria-label="Subtitle" placeholder="Subtitle (optional)">
+    <label class="check"><input type="checkbox" id="labels"> Show titles under covers</label>
+    <label class="check"><input type="checkbox" id="inline-covers"> Bake covers into exported page</label>
+  </div>
+
+  <p class="hint">Drag a cover to rank it. Click one to edit its link, author and hover details.
+  Keyboard: focus a cover, then <kbd>Ctrl</kbd>+<kbd>↑</kbd>/<kbd>↓</kbd> to change tier,
+  <kbd>Ctrl</kbd>+<kbd>←</kbd>/<kbd>→</kbd> to reorder, <kbd>Enter</kbd> to edit.</p>
+
+  <div id="board" class="board-host"></div>
+
+  <div class="footline">
+    <span id="counts"></span>
+    <span id="storeinfo"></span>
+    <span id="status" role="status"></span>
+  </div>
+  <div id="live" class="visually-hidden" aria-live="polite"></div>
+</main>
+
+<dialog id="itemdialog" class="dlg">
+  <form id="itemform" method="dialog">
+    <h2>Edit item</h2>
+    <label>Title<input name="title" required></label>
+    <label>Author<input name="byline" placeholder="Author name"></label>
+    <label>Link<input name="href" placeholder="https://… (Amazon, Royal Road, Goodreads)"></label>
+    <label>Cover image URL<input name="cover" placeholder="covers/book.jpg or https://…"></label>
+    <label>Note<textarea name="note" rows="2" placeholder="One line shown in the hover card"></textarea></label>
+    <label>Extra fields<textarea name="fields" rows="3" placeholder="hours: 84&#10;volumes: 12"></textarea>
+      <small>One <code>key: value</code> per line. These show in the hover card.</small></label>
+    <menu>
+      <button value="delete" class="danger">Delete</button>
+      <span class="spacer"></span>
+      <button value="cancel" formnovalidate>Cancel</button>
+      <button value="save" class="primary">Save</button>
+    </menu>
+  </form>
+</dialog>
+
+<dialog id="previewdialog" class="dlg dlg-wide">
+  <h2>Page preview</h2>
+  <p class="dlg-hint">Covers are links here, exactly as in the exported file. Hover or tab to a
+  cover to see its card.</p>
+  <div id="previewbody" class="preview-body"></div>
+  <menu>
+    <button type="button" data-close>Close</button>
+    <button type="button" id="btn-html-2" class="primary">Download page</button>
+  </menu>
+</dialog>
+
+<dialog id="adddialog" class="dlg">
+  <form id="addform">
+    <h2>Add books</h2>
+    <p class="dlg-hint">One per line: <code>Title | Author | link | cover image URL</code>.
+    Tabs or commas work too. Everything after the title is optional.</p>
+    <textarea name="bulk" rows="8" placeholder="The Primal Hunter | Zogarth | https://… | covers/primal-hunter.jpg"></textarea>
+    <menu>
+      <button type="button" data-close>Cancel</button>
+      <button type="submit" class="primary">Add</button>
+    </menu>
+  </form>
+</dialog>
+
+<script type="module" src="../src/editor/app.js"></script>
+</body>
+</html>

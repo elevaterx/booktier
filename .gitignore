@@ -1,0 +1,5 @@
+node_modules/
+covers/*
+!covers/.gitkeep
+*.local.json
+.DS_Store

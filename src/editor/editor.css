@@ -1,0 +1,47 @@
+/* Board styles are injected at runtime from src/render/page.js (BOARD_CSS) so the editor
+   and the exported page can never drift apart. Everything here is editor chrome only. */
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--bt-bg);color:var(--bt-fg);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+.app-head{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:12px 20px;border-bottom:1px solid var(--bt-line);position:sticky;top:0;background:var(--bt-bg);z-index:30}
+.brand{font-weight:700;letter-spacing:-.02em;color:inherit;text-decoration:none}
+.brand:hover{text-decoration:underline}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
+button{font:inherit;padding:7px 12px;border-radius:8px;border:1px solid var(--bt-line);background:var(--bt-card);color:var(--bt-fg);cursor:pointer}
+button:hover{border-color:#6ea8fe}
+button.primary{background:#2b5cd7;border-color:#2b5cd7;color:#fff}
+button.ghost{background:transparent;color:var(--bt-muted)}
+button.danger{color:#ff8080;border-color:#5a2a2a}
+.app-main{max-width:1100px;margin:0 auto;padding:20px 16px 60px}
+.meta{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+.title-input,.sub-input{font:inherit;background:transparent;border:1px solid transparent;border-radius:8px;padding:6px 8px;color:var(--bt-fg)}
+.title-input{font-size:24px;font-weight:650;flex:1 1 320px}
+.sub-input{flex:1 1 240px;color:var(--bt-muted)}
+.title-input:hover,.sub-input:hover,.title-input:focus,.sub-input:focus{border-color:var(--bt-line);outline:none}
+.check{color:var(--bt-muted);font-size:13px;display:flex;gap:6px;align-items:center}
+.hint{color:var(--bt-muted);font-size:13px;margin:4px 0 16px}
+kbd{font:600 11px/1 ui-monospace,monospace;border:1px solid var(--bt-line);border-bottom-width:2px;border-radius:4px;padding:2px 4px}
+.board-host .bt-item{cursor:grab}
+.footline{display:flex;gap:16px;margin-top:14px;font-size:13px;color:var(--bt-muted)}
+#status.error{color:#ff9f9f}
+.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* drag affordances */
+.bt-ghost{position:fixed;top:0;left:0;pointer-events:none;opacity:.85;z-index:100;transform:translate(-9999px,-9999px)}
+.bt-dragging{opacity:.3}
+body.bt-dragging-active{cursor:grabbing;user-select:none}
+.bt-marker{flex:0 0 3px;align-self:stretch;min-height:calc(var(--bt-cover-w)*1.5);background:#6ea8fe;border-radius:2px}
+
+.dlg-wide{width:min(1000px,94vw)}
+.preview-body{max-height:min(66vh,600px);overflow:auto;padding:12px;border:1px solid var(--bt-line);border-radius:8px;background:var(--bt-bg)}
+
+/* dialogs */
+.dlg{border:1px solid var(--bt-line);background:var(--bt-card);color:var(--bt-fg);border-radius:12px;padding:20px;width:min(460px,92vw)}
+.dlg::backdrop{background:rgba(0,0,0,.55)}
+.dlg h2{margin:0 0 12px;font-size:17px}
+.dlg label{display:block;margin-bottom:10px;font-size:13px;color:var(--bt-muted)}
+.dlg input,.dlg textarea{display:block;width:100%;margin-top:4px;font:inherit;padding:7px 9px;border-radius:8px;border:1px solid var(--bt-line);background:var(--bt-bg);color:var(--bt-fg)}
+.dlg small{display:block;margin-top:4px;color:var(--bt-muted)}
+.dlg-hint{color:var(--bt-muted);font-size:13px;margin:0 0 10px}
+.dlg menu{display:flex;gap:8px;align-items:center;padding:0;margin:14px 0 0}
+.dlg menu .spacer{flex:1}
