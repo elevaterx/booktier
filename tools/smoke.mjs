@@ -839,6 +839,27 @@ const storeFlow = await page.evaluate(async () => {
 check('an empty store renders the cover as a placeholder', storeFlow.cold === 1, JSON.stringify(storeFlow));
 check('filling the store first puts the art in the image', storeFlow.warm === 0 && storeFlow.stored >= 1, JSON.stringify(storeFlow));
 
+// ensureAll runs several fetches at once; progress must still count every cover exactly once
+const batched = await page.evaluate(async () => {
+  const covers = await import('../src/io/covers.js');
+  const { createDoc } = await import('../src/core/schema.js');
+  await covers.clearAll();
+  const base = new URL('../tools/fixtures/cover.png', location.href).href;
+  const doc = createDoc({ items: Array.from({ length: 12 }, (_, n) => ({
+    title: `B${n}`, tier: 'a', pos: n, image: { src: `${base}?n=${n}` } })) });
+  const seen = [];
+  const summary = await covers.ensureAll(doc, { onProgress: (d, t) => seen.push(`${d}/${t}`) });
+  return {
+    reported: seen.length,
+    last: seen[seen.length - 1],
+    monotonic: seen.every((v, n) => Number(v.split('/')[0]) === n + 1),
+    stored: summary.stored,
+  };
+});
+check('a batch of covers is fetched in parallel and counted exactly once',
+  batched.reported === 12 && batched.last === '12/12' && batched.monotonic && batched.stored === 12,
+  JSON.stringify(batched));
+
 // and a cover-less book must not print its title twice when captions are on
 const doubled = await page.evaluate(async () => {
   const { createDoc } = await import('../src/core/schema.js');

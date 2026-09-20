@@ -149,15 +149,32 @@ export async function ensure(url, { force = false } = {}) {
   }
 }
 
+// A few at a time, not one at a time. A 59-book list is 58 covers, and fetching them strictly
+// in sequence turns a five-second wait into half a minute of a counter crawling — which is the
+// difference between a pause and something that looks hung. Kept low deliberately: this fetches
+// from somebody else's image host, and politeness costs nothing here.
+const FETCH_CONCURRENCY = 5;
+
 export async function ensureAll(doc, { onProgress, force = false } = {}) {
   const urls = [...new Set(doc.items.map((i) => i.image && i.image.src).filter(Boolean))];
   const summary = { stored: 0, cached: 0, skipped: 0, failed: 0, failures: [] };
-  for (let i = 0; i < urls.length; i += 1) {
-    const res = await ensure(urls[i], { force });
-    summary[res.status] += 1;
-    if (res.status === 'failed') summary.failures.push({ url: urls[i], reason: res.reason });
-    if (onProgress) onProgress(i + 1, urls.length, res);
-  }
+  let next = 0;
+  let done = 0;
+
+  const worker = async () => {
+    for (;;) {
+      const i = next;
+      next += 1;
+      if (i >= urls.length) return;
+      const res = await ensure(urls[i], { force });
+      summary[res.status] += 1;
+      if (res.status === 'failed') summary.failures.push({ url: urls[i], reason: res.reason });
+      done += 1;
+      if (onProgress) onProgress(done, urls.length, res);
+    }
+  };
+
+  await Promise.all(Array.from({ length: Math.min(FETCH_CONCURRENCY, urls.length) }, worker));
   return summary;
 }
 
