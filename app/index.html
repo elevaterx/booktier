@@ -17,12 +17,9 @@
     <button id="btn-import" type="button">Import…</button>
     <button id="btn-covers" type="button">Save covers</button>
     <button id="btn-preview" type="button">Preview page</button>
-    <button id="btn-html" type="button" class="primary">Export page</button>
-    <button id="btn-png" type="button">Export image</button>
-    <button id="btn-reddit" type="button">Copy for Reddit</button>
-    <button id="btn-json" type="button">Export JSON</button>
+    <button id="btn-export" type="button" class="primary">Export or share…</button>
     <button id="btn-reset" type="button" class="ghost">Reset</button>
-    <input id="file" type="file" accept=".json,.html" hidden>
+    <input id="file" type="file" accept=".json,.html,.htm" hidden>
   </div>
 </header>
 
@@ -31,7 +28,6 @@
     <input id="title" class="title-input" aria-label="Tier list title" placeholder="Tier list title">
     <input id="subtitle" class="sub-input" aria-label="Subtitle" placeholder="Subtitle (optional)">
     <label class="check"><input type="checkbox" id="labels"> Show titles under covers</label>
-    <label class="check"><input type="checkbox" id="inline-covers"> Bake covers into exported page</label>
     <input id="caption" class="sub-input" aria-label="Caption printed on the exported image"
            placeholder="Caption for the image (your link, handle…)">
   </div>
@@ -47,6 +43,7 @@
     <span id="counts"></span>
     <span id="storeinfo"></span>
     <span id="status" role="status"></span>
+    <button id="btn-restore" type="button" class="restore" hidden>Restore my previous list</button>
   </div>
   <div id="live" class="visually-hidden" aria-live="polite"></div>
 </main>
@@ -70,6 +67,58 @@
   </form>
 </dialog>
 
+<dialog id="exportdialog" class="dlg">
+  <h2>Export or share</h2>
+  <p class="dlg-hint">Five ways out. The first two are files you keep; the rest are for handing the
+  list to someone else.</p>
+  <ul class="exportlist">
+    <li>
+      <button type="button" id="btn-html" class="primary">Web page</button>
+      <p>A standalone <code>.html</code> file to host anywhere. Covers stay links, hover cards
+      work, and it can be imported back here.</p>
+    </li>
+    <li>
+      <button type="button" id="btn-png">Image</button>
+      <p>A <code>.png</code> to paste into Reddit or Discord. Covers come from the local store, so
+      press <b>Save covers</b> first.</p>
+    </li>
+    <li>
+      <button type="button" id="btn-share">Share link</button>
+      <p>A URL that rebuilds this list in someone else's browser. The list travels in the part of
+      the address that is never sent to any server.</p>
+    </li>
+    <li>
+      <button type="button" id="btn-reddit">Markdown for Reddit</button>
+      <p>Every title stays a clickable link inside the post itself — no image, no page to host.</p>
+    </li>
+    <li>
+      <button type="button" id="btn-json">JSON</button>
+      <p>The document itself. This is the copy you own; everything else is generated from it.</p>
+    </li>
+  </ul>
+  <label class="check"><input type="checkbox" id="inline-covers"> Bake covers into the exported web
+  page (larger file, survives a cover URL changing)</label>
+  <menu>
+    <button type="button" data-close>Close</button>
+  </menu>
+</dialog>
+
+<dialog id="sharedialog" class="dlg dlg-wide">
+  <h2>Share link</h2>
+  <p class="dlg-hint">The whole list is encoded in the link after the <code>#</code>, which
+  browsers never send to a server — so nobody, including whoever hosts this copy, sees what you
+  ranked. Opening it gives the other person their own editable copy.</p>
+  <textarea id="shareout" rows="4" readonly></textarea>
+  <p id="sharelen" class="dlg-hint"></p>
+  <label class="check"><input type="checkbox" id="share-covers" checked> Include cover images
+  (leave off for a much shorter link)</label>
+  <menu>
+    <button type="button" data-close>Close</button>
+    <span class="spacer"></span>
+    <button type="button" id="btn-share-copy" class="primary">Copy link</button>
+  </menu>
+</dialog>
+
 <dialog id="mddialog" class="dlg dlg-wide">
   <h2>Markdown for Reddit</h2>
   <p class="dlg-hint">Every title stays a link when pasted into a Reddit post — no image, no
@@ -78,8 +127,12 @@
   <menu>
     <button type="button" data-close>Close</button>
     <span class="spacer"></span>
+    <button type="button" id="btn-reddit-post">Open r/litrpg submit</button>
     <button type="button" id="btn-md-copy" class="primary">Copy to clipboard</button>
   </menu>
+  <p class="dlg-hint">“Open r/litrpg submit” opens Reddit's post form in a new tab with the title
+  and body filled in. Check the subreddit's rules before posting — and if the body arrives empty,
+  Reddit changed its form: copy the markdown and paste it yourself.</p>
 </dialog>
 
 <dialog id="previewdialog" class="dlg dlg-wide">

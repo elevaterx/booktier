@@ -81,5 +81,9 @@ export function readEmbedded(htmlText) {
   const match = String(htmlText).match(/<script type="application\/json" id="booktier-data">([\s\S]*?)<\/script>/);
   if (!match) return null;
   if (match[1].length > MAX_BYTES) throw new Error('embedded document too large');
-  return migrate(JSON.parse(match[1].replace(/\\u003c/g, '<')));
+  // No un-escaping here. pageHtml writes \u003c for every `<`, which is a JSON escape
+  // JSON.parse already understands. Rewriting it first breaks any title that literally
+  // contains those six characters: JSON.stringify escapes the backslash, this ate half of
+  // the result, and re-import threw "Bad escaped character in JSON".
+  return migrate(JSON.parse(match[1]));
 }

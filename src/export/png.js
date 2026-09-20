@@ -32,6 +32,11 @@ const BASE = {
   captionSize: 11,
 };
 
+// Gap above the caption, two lines at 1.25 leading, and the descender of the second line.
+// The old 2.6x budget was a hair short of that, so a title that wrapped drew its second line
+// past the row's rounded background.
+const CAPTION_BLOCK = (S) => 4 * (S.coverW / BASE.coverW) + S.captionSize * 1.25 * 2 + S.captionSize * 0.35;
+
 function roundRect(ctx, x, y, w, h, r) {
   const radius = Math.min(r, w / 2, h / 2);
   ctx.beginPath();
@@ -43,22 +48,34 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
+// Clip a single string to maxWidth, with an ellipsis if anything was cut.
+function clip(ctx, text, maxWidth) {
+  if (ctx.measureText(text).width <= maxWidth) return text;
+  let cut = text;
+  while (cut && ctx.measureText(`${cut}…`).width > maxWidth) cut = cut.slice(0, -1);
+  return cut ? `${cut}…` : '';
+}
+
 function wrapLines(ctx, text, maxWidth, maxLines) {
   const words = String(text || '').split(/\s+/).filter(Boolean);
   const lines = [];
   let line = '';
+  let overflowed = false;
   for (const word of words) {
     const candidate = line ? `${line} ${word}` : word;
-    if (ctx.measureText(candidate).width <= maxWidth || !line) { line = candidate; continue; }
-    lines.push(line);
-    line = word;
-    if (lines.length === maxLines) break;
+    if (ctx.measureText(candidate).width <= maxWidth) { line = candidate; continue; }
+    if (line) lines.push(line);
+    // A word wider than the box — a URL, or a long unhyphenated compound — used to be written
+    // out at full width and drawn over the neighbouring column. Every line is clipped now.
+    line = ctx.measureText(word).width <= maxWidth ? word : clip(ctx, word, maxWidth);
+    if (lines.length === maxLines) { overflowed = true; break; }
   }
-  if (lines.length < maxLines && line) lines.push(line);
-  if (lines.length === maxLines) {
-    let last = lines[maxLines - 1];
-    while (last && ctx.measureText(`${last}…`).width > maxWidth) last = last.slice(0, -1);
-    lines[maxLines - 1] = words.join(' ') === lines.join(' ') ? lines[maxLines - 1] : `${last}…`;
+  if (!overflowed && lines.length < maxLines && line) lines.push(line);
+  if (lines.length > maxLines) lines.length = maxLines;
+  const consumed = lines.join(' ');
+  if (overflowed || consumed !== words.join(' ')) {
+    const last = lines.length ? lines[lines.length - 1] : '';
+    if (last) lines[lines.length - 1] = clip(ctx, `${last}…`, maxWidth);
   }
   return lines;
 }
@@ -91,7 +108,10 @@ function drawPlaceholder(ctx, item, x, y, w, h, radius, scale) {
 
 /**
  * Render the document to a PNG blob.
- * @returns {Promise<{blob: Blob, width: number, height: number, missing: Array<{title:string,src:string}>}>}
+ * `missing` is covers the item HAS but the store does not — the ones "Save covers" can fix.
+ * Items with no cover at all come back as `noCover`: telling someone to save a cover that does
+ * not exist is a false error, which is what the old single list produced.
+ * @returns {Promise<{blob: Blob, width: number, height: number, missing: Array<{title:string,src:string}>, noCover: string[]}>}
  */
 export async function toPng(doc, { scale = 2, credit = true } = {}) {
   const S = Object.fromEntries(Object.entries(BASE).map(([k, v]) => [k, v * scale]));
@@ -103,9 +123,10 @@ export async function toPng(doc, { scale = 2, credit = true } = {}) {
   // Resolve every cover up front so layout and drawing never wait on I/O mid-paint.
   const bitmaps = new Map();
   const missing = [];
+  const noCover = [];
   for (const item of doc.items) {
     const src = item.image && item.image.src;
-    if (!src) { missing.push({ title: item.title, src: '' }); continue; }
+    if (!src) { noCover.push(item.title); continue; }
     const bitmap = await bitmapFor(src).catch(() => null);
     if (bitmap) bitmaps.set(item.id, bitmap);
     else missing.push({ title: item.title, src });
@@ -119,7 +140,7 @@ export async function toPng(doc, { scale = 2, credit = true } = {}) {
   const headerH = S.titleSize * 1.4 + (doc.subtitle ? S.subSize * 1.8 : 0) + S.pad * 2;
   const rowHeights = rows.map((row) => {
     const lines = Math.max(1, Math.ceil(row.items.length / perRow));
-    const itemH = S.coverH + (doc.render.showLabels ? S.captionSize * 2.6 : 0);
+    const itemH = S.coverH + (doc.render.showLabels ? CAPTION_BLOCK(S) : 0);
     return Math.max(itemH + S.pad * 2, lines * itemH + (lines - 1) * S.gap + S.pad * 2);
   });
   const footerH = (credit || (doc.render && doc.render.caption)) ? S.subSize * 2.4 : S.pad;
@@ -167,7 +188,7 @@ export async function toPng(doc, { scale = 2, credit = true } = {}) {
     ctx.textBaseline = 'middle';
     ctx.fillText(String(row.tier.label || ''), S.pad + S.labelW / 2, y + rowH / 2);
 
-    const itemH = S.coverH + (doc.render.showLabels ? S.captionSize * 2.6 : 0);
+    const itemH = S.coverH + (doc.render.showLabels ? CAPTION_BLOCK(S) : 0);
     row.items.forEach((item, i) => {
       const col = i % perRow;
       const line = Math.floor(i / perRow);
@@ -193,11 +214,18 @@ export async function toPng(doc, { scale = 2, credit = true } = {}) {
   const caption = (doc.render && doc.render.caption) || '';
   if (caption || credit) {
     ctx.textBaseline = 'top';
+    // Measure the credit first and give the caption what is left, clipped. A handle plus a URL
+    // is longer than the footer, and it used to be drawn straight through the credit.
+    let creditWidth = 0;
+    if (credit) {
+      ctx.font = `${S.subSize * 0.75}px system-ui, sans-serif`;
+      creditWidth = ctx.measureText('booktier.org').width + S.pad;
+    }
     if (caption) {
       ctx.fillStyle = THEME.text;
       ctx.font = `600 ${S.subSize * 0.95}px system-ui, sans-serif`;
       ctx.textAlign = 'left';
-      ctx.fillText(caption, S.pad, y + S.pad * 0.2);
+      ctx.fillText(clip(ctx, caption, S.boardW - S.pad * 2 - creditWidth), S.pad, y + S.pad * 0.2);
     }
     if (credit) {
       ctx.fillStyle = THEME.muted;
@@ -212,5 +240,5 @@ export async function toPng(doc, { scale = 2, credit = true } = {}) {
   const blob = await new Promise((resolve, reject) => {
     canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('PNG encode failed'))), 'image/png');
   });
-  return { blob, width: canvas.width, height: canvas.height, missing };
+  return { blob, width: canvas.width, height: canvas.height, missing, noCover };
 }

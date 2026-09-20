@@ -1,2 +1,13 @@
-# Auto detect text files and perform LF normalization
+# Generated files are compared byte for byte by tools/build-css.mjs --check and
+# tools/build-site.mjs --check, which write LF. With `* text=auto` alone, a fresh clone on
+# Windows gets CRLF in the working tree and `npm run check` fails on a clean checkout.
 * text=auto
+*.html text eol=lf
+*.css  text eol=lf
+*.js   text eol=lf
+*.mjs  text eol=lf
+*.json text eol=lf
+*.md   text eol=lf
+_headers text eol=lf
+.assetsignore text eol=lf
+*.png binary

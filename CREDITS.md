@@ -17,7 +17,7 @@ Each is named here with what was taken.
 - Per-item metadata beyond the image, and a hover overlay that shows it. booktier folds this
   into the item record rather than a parallel side-table, and renders the card in CSS so it
   works without JavaScript.
-- Its dependency-free canvas PNG exporter is the model for the PNG export on the roadmap.
+- Its dependency-free canvas PNG exporter is the model for `src/export/png.js`.
 
 **[nathan71370/tierlistrr](https://github.com/nathan71370/tierlistrr)** — MIT.
 - The shape of `groupByPlacement` / `toPlacements`: keep a flat item list as the source of

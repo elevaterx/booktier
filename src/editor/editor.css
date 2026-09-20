@@ -1,5 +1,6 @@
-/* Board styles are injected at runtime from src/render/page.js (BOARD_CSS) so the editor
-   and the exported page can never drift apart. Everything here is editor chrome only. */
+/* Board styles live in src/render/board.css, generated from BOARD_CSS in src/render/page.js by
+   tools/build-css.mjs, so the editor and the exported page cannot drift apart — and so the app
+   needs no inline <style> under a strict CSP. Everything here is editor chrome only. */
 
 *{box-sizing:border-box}
 body{margin:0;background:var(--bt-bg);color:var(--bt-fg);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
@@ -61,3 +62,21 @@ body.bt-dragging-active{cursor:grabbing;user-select:none}
 #bulkbox summary:hover{color:var(--bt-fg)}
 #addcount{margin:2px 0 0;min-height:18px;color:#7fd18f}
 .dlg menu .spacer{flex:1}
+
+/* export chooser: one button per way out, with a line saying what it is for */
+.exportlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+.exportlist li{display:grid;grid-template-columns:150px 1fr;gap:12px;align-items:start;padding:10px 0;border-top:1px solid var(--bt-line)}
+.exportlist li:first-child{border-top:0}
+.exportlist button{width:100%;justify-self:start}
+.exportlist p{margin:2px 0 0;font-size:12.5px;line-height:1.45;color:var(--bt-muted)}
+.exportlist code{font-size:12px}
+@media (max-width:560px){.exportlist li{grid-template-columns:1fr;gap:4px}}
+
+#shareout{width:100%;font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;resize:vertical;word-break:break-all}
+.len-ok{color:var(--bt-muted)}
+.len-warn{color:#e3b341}
+.len-error{color:#ff8f8f}
+
+/* restoring a list a shared link displaced */
+.restore{font-size:12px;padding:3px 9px;border-radius:999px;border:1px solid #e3b341;background:transparent;color:#e3b341;cursor:pointer}
+.restore:hover{background:rgba(227,179,65,.12)}

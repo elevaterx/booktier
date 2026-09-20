@@ -23,12 +23,18 @@ export const DEFAULT_RENDER = {
 };
 
 let counter = 0;
-export function newId(seed) {
+// `used` is the set of ids already spoken for. Without it the counter restarts at zero on every
+// page load, so importing a file and then adding a book by hand can mint an id the document is
+// already using — after which find(i => i.id === id) resolves the wrong item for every edit,
+// drag and delete.
+export function newId(seed, used) {
   const base = String(seed || 'item')
     .toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '').slice(0, 48) || 'item';
-  counter += 1;
-  return `${base}-${counter.toString(36)}`;
+  let id;
+  do { counter += 1; id = `${base}-${counter.toString(36)}`; } while (used && used.has(id));
+  if (used) used.add(id);
+  return id;
 }
 
 export function createDoc(partial = {}) {
@@ -36,9 +42,46 @@ export function createDoc(partial = {}) {
     schema: SCHEMA,
     title: partial.title || 'Untitled tier list',
     subtitle: partial.subtitle || '',
-    tiers: partial.tiers ? partial.tiers.map(normalizeTier) : DEFAULT_TIERS.map(normalizeTier),
-    items: (partial.items || []).map(normalizeItem),
-    render: { ...DEFAULT_RENDER, ...(partial.render || {}) },
+    tiers: dedupeTiers(partial.tiers ? partial.tiers.map(normalizeTier) : DEFAULT_TIERS.map(normalizeTier)),
+    items: dedupeIds((partial.items || []).map(normalizeItem)),
+    render: normalizeRender(partial.render),
+  };
+}
+
+// Two tiers sharing an id make groupByTier hand the same bucket to both rows, so every item in
+// that tier renders twice — in the editor, in the exported page and in the image.
+function dedupeTiers(tiers) {
+  const seen = new Set();
+  return tiers.filter((t) => (seen.has(t.id) ? false : (seen.add(t.id), true)));
+}
+
+// Ids arrive from the file, so a document can hand us duplicates directly.
+function dedupeIds(items) {
+  const seen = new Set();
+  return items.map((item) => {
+    if (!seen.has(item.id)) { seen.add(item.id); return item; }
+    return { ...item, id: newId(item.title, seen) };
+  });
+}
+
+// Render options come out of the same untrusted document as everything else. `rel` is the one
+// that bites: an explicit rel="" suppresses the implicit noopener browsers apply to
+// target=_blank links, which hands the linked page window.opener on the reader's tab. A shared
+// link is the natural delivery mechanism for that, so the value is forced, never merged.
+export function normalizeRender(raw) {
+  const partial = raw && typeof raw === 'object' ? raw : {};
+  const tooltip = ['card', 'native', 'none'].includes(partial.tooltip) ? partial.tooltip : DEFAULT_RENDER.tooltip;
+  const target = partial.target === '_self' ? '_self' : '_blank';
+  const asked = typeof partial.rel === 'string' ? partial.rel.toLowerCase().split(/\s+/).filter(Boolean) : [];
+  const rel = [...new Set(['noopener', 'noreferrer', ...asked.filter((t) => /^[a-z-]+$/.test(t))])].join(' ');
+  return {
+    ...DEFAULT_RENDER,
+    tooltip,
+    target,
+    rel,
+    showLabels: !!partial.showLabels,
+    fieldOrder: Array.isArray(partial.fieldOrder) ? partial.fieldOrder.filter((k) => typeof k === 'string') : [],
+    caption: typeof partial.caption === 'string' ? partial.caption : '',
   };
 }
 
@@ -104,7 +147,16 @@ export function safeImageSrc(src) {
     } catch { return ''; }
   }
   if (value.startsWith('//')) return '';                  // protocol-relative: resolve explicitly instead
-  return /^[\w./-]+$/.test(value) ? value : '';           // relative path, no traversal tricks or quotes
+  // A relative path. The old \w-only test rejected every ordinary filename with a space, an
+  // accent or a ?v= cache-buster — and it never blocked the `..` its comment claimed to, since
+  // dots and slashes both passed it.
+  //
+  // `..` is left alone deliberately. A relative src always resolves on this origin whatever it
+  // climbs through, so it is not a boundary anything can cross — and the layout HOSTING.md
+  // recommends, an exported list in /lists/ pointing at /covers/, needs it. What is worth
+  // refusing is a value that could break out of the attribute it is written into.
+  if (/[\\"'<>\u0000-\u001f]/.test(value)) return '';
+  return value;
 }
 
 export function validate(doc) {
@@ -114,6 +166,9 @@ export function validate(doc) {
   if (!Array.isArray(doc.tiers) || doc.tiers.length === 0) errors.push('tiers must be a non-empty array');
   if (!Array.isArray(doc.items)) errors.push('items must be an array');
   const tierIds = new Set((doc.tiers || []).map((t) => t && t.id));
+  if (Array.isArray(doc.tiers) && tierIds.size !== doc.tiers.length) errors.push('two tiers share an id');
+  const itemIds = new Set((doc.items || []).map((it) => it && it.id));
+  if (Array.isArray(doc.items) && itemIds.size !== doc.items.length) errors.push('two items share an id');
   (doc.items || []).forEach((it, i) => {
     if (!it || typeof it !== 'object') { errors.push(`item ${i} is not an object`); return; }
     if (it.tier !== null && it.tier !== undefined && !tierIds.has(String(it.tier))) {
@@ -126,6 +181,12 @@ export function validate(doc) {
 // Version gate. v1 is current; older shapes get lifted here rather than at call sites.
 export function migrate(raw) {
   if (!raw || typeof raw !== 'object') throw new Error('not a tier list document');
+  if (Array.isArray(raw.tiers) && raw.tiers.some((t) => !t || typeof t !== 'object')) {
+    throw new Error('a tier in that document is not an object');
+  }
+  if (Array.isArray(raw.items) && raw.items.some((i) => i !== null && i !== undefined && typeof i !== 'object')) {
+    throw new Error('an item in that document is not an object');
+  }
   if (raw.schema === SCHEMA) return createDoc(raw);
   if (!raw.schema && Array.isArray(raw.tiers)) return createDoc(raw); // tolerate schema-less hand-written files
   throw new Error(`unsupported schema "${raw.schema}"`);

@@ -27,18 +27,30 @@ controllable, and all of them end up as HTML on a page you host.
 document cannot close its own tag.
 
 **Scheme allowlists, not blocklists.** Links are restricted to http, https and mailto
-(`safeHref`); cover sources to http, https, `data:image/*`, and relative paths with no quotes or
-traversal (`safeImageSrc`). Anything else becomes an empty string, and the renderer emits a plain
+(`safeHref`); cover sources to http, https, `data:image/*`, and relative paths carrying no quote,
+angle bracket or control character (`safeImageSrc`). A relative path may contain `..` — it always
+resolves on this origin whatever it climbs through, and the exported-lists layout below depends
+on it. Anything else becomes an empty string, and the renderer emits a plain
 focusable element instead of an anchor. Tier colors are matched against a hex pattern before they
 reach a style property, because that is the one value that lands in CSS.
 
 **Bounded remote input.** `?data=` requires https (except localhost), rejects URLs carrying
 credentials, sends `credentials: 'omit'` and `no-referrer`, times out, and refuses documents over
-2 MB or with a non-JSON content type.
+2 MB or with a non-JSON content type. A `#s=` share link is decompressed through a cap that stops
+the stream the moment it passes 1 MB, so a small link cannot inflate into a large document, and
+the result goes through the same `migrate` + `validate` gate as every other import.
 
-**Sandboxed preview.** The page preview renders inside `<iframe sandbox="">`, so a document that
-somehow slipped past validation still gets no script execution, no storage access, and no reach
-into the editor's origin.
+**Nothing replaces your list silently.** There is one autosave slot. A share link, a `?data=`
+link, an import and a reset all copy the previous document aside first and offer it back, because
+otherwise a link someone sends you destroys work you cannot recover.
+
+**Preview without an iframe.** The page preview is rendered by the same `boardHtml()` the export
+uses, into an element in this page — not in an `<iframe>`. An iframe inherits this page's
+Content-Security-Policy, which forbids the inline styles an exported file carries by design, so a
+sandboxed preview showed a correct file as a broken one. Nothing in the preview path executes
+document content: the renderer escapes every value and emits markup, and no script from a
+document is ever evaluated. An earlier version of this file described a sandboxed iframe that the
+code does not have.
 
 **No inline code.** No inline event handlers, no inline `<script>`, and board styles ship as a
 real stylesheet rather than an injected `<style>` block — so the app runs under a strict

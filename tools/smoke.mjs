@@ -1,8 +1,15 @@
-// Smoke test for the editor. Requires playwright and a static server on BASE_URL.
-//   python3 -m http.server 8777 & npx playwright install chromium && node tools/smoke.mjs
+// Smoke test for the editor.
+//   npm run smoke            — starts its own static server and runs everything
+//   BASE_URL=… node tools/smoke.mjs   — run against a server you started yourself
+//
+// The suite EXITS NON-ZERO on any failed check. It did not always: `check` used to be a bare
+// console.log, so every assertion in this file could fail and `npm run smoke` still reported
+// success — which made "the CSP is enforced by the test suite" a claim with nothing behind it.
 import { chromium } from 'playwright';
+import { startServer } from './serve.mjs';
 
-const base = (process.env.BASE_URL || 'http://127.0.0.1:8777').replace(/\/$/, '');
+const own = process.env.BASE_URL ? null : await startServer(0);
+const base = (process.env.BASE_URL || own.url).replace(/\/$/, '');
 const app = `${base}/app/`;
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
 // Cover images point at a third-party host. The tests check markup and behavior, not pixels,
@@ -47,7 +54,12 @@ await page.goto(app, { waitUntil: 'domcontentloaded' });
 await page.waitForSelector('#board .bt-item');
 
 
-const check = (name, cond, extra='') => console.log(`${cond ? 'PASS' : 'FAIL'}  ${name}${extra ? ' — ' + extra : ''}`);
+let passed = 0;
+const failures = [];
+const check = (name, cond, extra = '') => {
+  if (cond) passed += 1; else failures.push(`${name}${extra ? ' — ' + extra : ''}`);
+  console.log(`${cond ? 'PASS' : 'FAIL'}  ${name}${extra ? ' — ' + extra : ''}`);
+};
 
 // 1. sample data rendered
 const items = await page.locator('.bt-item').count();
@@ -388,6 +400,184 @@ check('a list on this site still loads', typeof dataPolicy.sameOrigin === 'strin
 check('a list on someone else\'s host is refused', !!(dataPolicy.foreign && dataPolicy.foreign.blocked === 'evil.example'), JSON.stringify(dataPolicy.foreign));
 check('the allowlist ships empty', Array.isArray(dataPolicy.allowlist) && dataPolicy.allowlist.length === 0);
 
+// ---- share links: the fragment carries the list, and never the query string ----
+const shareRound = await page.evaluate(async () => {
+  const sh = await import('../src/io/share.js');
+  const { createDoc } = await import('../src/core/schema.js');
+  const doc = createDoc({
+    title: 'Shared list',
+    items: [
+      { title: 'Kept', tier: 'a', pos: 0, href: 'https://example.test/a', image: { src: 'https://img.test/a.jpg' } },
+      { title: 'Hostile', tier: 's', pos: 0, href: 'javascript:alert(1)' },
+    ],
+    render: { rel: '', target: '_blank' },
+  });
+  const url = await sh.shareUrl(doc, { base: 'https://booktier.org/app/' });
+  const back = await sh.decodeDoc(sh.fragmentPayload(url.slice(url.indexOf('#'))));
+  const short = await sh.shareUrl(doc, { base: 'https://booktier.org/app/', covers: false });
+  let bombError = '';
+  try {
+    const big = new Uint8Array(4 * 1024 * 1024);
+    const packed = new Uint8Array(await new Response(
+      new Blob([big]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer());
+    let binary = ''; for (const b of packed) binary += String.fromCharCode(b);
+    await sh.decodeDoc('z' + btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''));
+  } catch (err) { bombError = err.message; }
+  let badError = '';
+  try { await sh.decodeDoc('q-not-a-payload'); } catch (err) { badError = err.message; }
+  return {
+    hash: url.slice(url.indexOf('#'), url.indexOf('#') + 3),
+    query: url.includes('?'),
+    items: back.items.length,
+    titles: back.items.map((i) => i.title).join('|'),
+    hostileHref: back.items.find((i) => i.title === 'Hostile').href,
+    rel: back.render.rel,
+    shorterWithoutCovers: short.length < url.length,
+    bombError,
+    badError,
+    advice: sh.lengthAdvice(50000).level,
+  };
+});
+check('share link travels in the fragment, not the query string', shareRound.hash === '#s=' && !shareRound.query, `${shareRound.hash} query=${shareRound.query}`);
+check('share link round-trips every item', shareRound.items === 2 && shareRound.titles === 'Kept|Hostile', shareRound.titles);
+check('a shared document is sanitized like any import', shareRound.hostileHref === '', JSON.stringify(shareRound.hostileHref));
+check('a shared document cannot suppress rel=noopener', shareRound.rel.includes('noopener') && shareRound.rel.includes('noreferrer'), shareRound.rel);
+check('leaving covers out shortens the link', shareRound.shorterWithoutCovers);
+check('a decompression bomb is refused', /too large/.test(shareRound.bombError), shareRound.bombError);
+check('an unknown payload marker is refused', /does not know/.test(shareRound.badError), shareRound.badError);
+check('an oversized link is called out', shareRound.advice === 'error', shareRound.advice);
+
+// Opening a share link must not silently destroy what the reader already had.
+const sharePage = await browser.newPage({ viewport: { width: 1280, height: 1100 } });
+await blockExternal(sharePage);
+sharePage.setDefaultTimeout(10000);
+await sharePage.goto(app, { waitUntil: 'domcontentloaded' });
+await sharePage.waitForSelector('#board .bt-item');
+// persist() is debounced, so the autosave key does not exist the instant the board renders.
+await sharePage.waitForFunction(() => !!localStorage.getItem('booktier/v1/doc'));
+await sharePage.evaluate(() => {
+  const doc = JSON.parse(localStorage.getItem('booktier/v1/doc'));
+  doc.title = 'MY IRREPLACEABLE LIST';
+  localStorage.setItem('booktier/v1/doc', JSON.stringify(doc));
+});
+const sharedFragment = await sharePage.evaluate(async () => {
+  const sh = await import('../src/io/share.js');
+  const { createDoc } = await import('../src/core/schema.js');
+  return sh.encodeDoc(createDoc({ title: 'Someone else’s list', items: [{ title: 'Theirs', tier: 'a', pos: 0 }] }));
+});
+await sharePage.goto(`${app}#s=${sharedFragment}`, { waitUntil: 'domcontentloaded' });
+// A fragment-only change is a same-document navigation — the script never re-runs. Reload so
+// this exercises what a recipient actually does: open the link cold.
+await sharePage.reload({ waitUntil: 'domcontentloaded' });
+await sharePage.waitForSelector('#board .bt-item');
+const afterShare = await sharePage.evaluate(() => ({
+  title: document.querySelector('#title').value,
+  hash: location.hash,
+  restoreShown: !document.querySelector('#btn-restore').hidden,
+  backup: JSON.parse(localStorage.getItem('booktier/v1/doc.previous') || 'null'),
+}));
+check('a share link opens the shared list', afterShare.title === 'Someone else’s list', afterShare.title);
+check('the fragment is cleared so a reload keeps your edits', afterShare.hash === '', afterShare.hash);
+check('the reader’s own list is kept, not overwritten', afterShare.backup && afterShare.backup.title === 'MY IRREPLACEABLE LIST', afterShare.backup && afterShare.backup.title);
+check('the reader is offered their list back', afterShare.restoreShown);
+await sharePage.click('#btn-restore');
+await sharePage.waitForFunction(() => document.querySelector('#title').value === 'MY IRREPLACEABLE LIST').catch(() => {});
+const restored = await sharePage.evaluate(() => document.querySelector('#title').value);
+check('restore brings the reader’s list back', restored === 'MY IRREPLACEABLE LIST', restored);
+await sharePage.close();
+
+// ---- export chooser and the Reddit submit link ----
+await page.click('#btn-export');
+const chooser = await page.evaluate(() => {
+  const dlg = document.querySelector('#exportdialog');
+  return { open: dlg.open, buttons: [...dlg.querySelectorAll('.exportlist button')].map((b) => b.id).join(',') };
+});
+check('one Export button opens a chooser with every method', chooser.open
+  && ['btn-html', 'btn-png', 'btn-share', 'btn-reddit', 'btn-json'].every((id) => chooser.buttons.includes(id)), chooser.buttons);
+await page.click('#btn-reddit');
+await page.waitForSelector('#mddialog[open]');
+const mdShown = await page.locator('#mdout').inputValue();
+check('the chooser opens the Reddit markdown with the list in it', mdShown.includes('**'), mdShown.slice(0, 40));
+const redditUrl = await page.evaluate(() => {
+  const url = new URL('https://www.reddit.com/r/litrpg/submit');
+  url.searchParams.set('title', 'Tier & list #1 — 100% done');
+  url.searchParams.set('text', '**S** — [A](https://x.test/a)');
+  return url.href;
+});
+check('a hostile title survives the Reddit submit URL intact', (() => {
+  const parsed = new URL(redditUrl);
+  return parsed.pathname === '/r/litrpg/submit'
+    && parsed.searchParams.get('title') === 'Tier & list #1 — 100% done'
+    && parsed.searchParams.get('text') === '**S** — [A](https://x.test/a)';
+})(), redditUrl.slice(0, 80));
+const redditLinkSafe = await page.evaluate(() => {
+  const source = document.querySelector('#btn-reddit-post') ? 'present' : 'missing';
+  return source;
+});
+check('the Reddit submit button exists', redditLinkSafe === 'present');
+await page.evaluate(() => { document.querySelector('#mddialog').close(); document.querySelector('#exportdialog').close(); });
+
+// ---- bugs found in review: none of these may come back ----
+const regressions = await page.evaluate(async () => {
+  const schema = await import('../src/core/schema.js');
+  const { readEmbedded } = await import('../src/io/loadUrl.js');
+  const { pageHtml } = await import('../src/render/page.js');
+  const { toMarkdown } = await import('../src/export/markdown.js');
+
+  // a title containing the six characters \u003c must survive an export/import round trip
+  const tricky = schema.createDoc({ title: 'Round trip', items: [{ title: 'literal \\u003c backslash', tier: 'a', pos: 0 }] });
+  let roundTripTitle = '';
+  try { roundTripTitle = readEmbedded(pageHtml(tricky)).items[0].title; } catch (err) { roundTripTitle = `THREW: ${err.message}`; }
+
+  // duplicate tier ids must not double every item in that tier
+  const dup = schema.createDoc({
+    tiers: [{ id: 'a', label: 'A', color: '#fff' }, { id: 'a', label: 'A again', color: '#000' }],
+    items: [{ id: 'one', title: 'Only once', tier: 'a', pos: 0 }],
+  });
+  const rendered = (pageHtml(dup).match(/data-id="one"/g) || []).length;
+
+  // an item whose tier no longer exists must still appear somewhere
+  const dangling = schema.migrate({
+    schema: 'booktier/v1', title: 'T',
+    tiers: [{ id: 'a', label: 'A', color: '#fff' }],
+    items: [{ id: '1', title: 'Orphan', tier: 'ghost', pos: 0 }],
+  });
+
+  // a new id must not collide with one the document already holds
+  const used = new Set(['the-primal-hunter-1']);
+  const minted = schema.newId('The Primal Hunter', used);
+
+  return {
+    roundTripTitle,
+    renderedTimes: rendered,
+    markdownHasOrphan: toMarkdown(dangling).includes('Orphan'),
+    mintedCollides: minted === 'the-primal-hunter-1',
+    relative: schema.safeImageSrc('../covers/a.jpg'),
+    spaced: schema.safeImageSrc('covers/My Book.jpg'),
+    quoted: schema.safeImageSrc('covers/a".jpg'),
+  };
+});
+check('a title holding a literal \\u003c survives export and re-import', regressions.roundTripTitle === 'literal \\u003c backslash', regressions.roundTripTitle);
+check('duplicate tier ids do not double an item', regressions.renderedTimes === 1, `${regressions.renderedTimes} copies`);
+check('an item with a dangling tier still reaches the Reddit post', regressions.markdownHasOrphan);
+check('a generated id never collides with an existing one', !regressions.mintedCollides);
+check('the documented ../covers/ layout is accepted', regressions.relative === '../covers/a.jpg', regressions.relative);
+check('an ordinary filename with a space is accepted', regressions.spaced === 'covers/My Book.jpg', regressions.spaced);
+check('a cover path with a quote in it is refused', regressions.quoted === '', regressions.quoted);
+
+const pngCounts = await page.evaluate(async () => {
+  const { createDoc } = await import('../src/core/schema.js');
+  const { toPng } = await import('../src/export/png.js');
+  const doc = createDoc({ title: 'No covers', items: [
+    { title: 'Bare one', tier: 'a', pos: 0 },
+    { title: 'Bare two', tier: 'a', pos: 1 },
+  ] });
+  const out = await toPng(doc, { scale: 1 });
+  return { missing: out.missing.length, noCover: out.noCover.length };
+});
+check('books with no cover are not reported as missing covers', pngCounts.missing === 0 && pngCounts.noCover === 2,
+  `missing=${pngCounts.missing} noCover=${pngCounts.noCover}`);
+
 // ---- landing page ----
 const landing = await browser.newPage({ viewport: { width: 1280, height: 1100 } });
 landing.setDefaultTimeout(10000);
@@ -448,4 +638,11 @@ check('landing does not scroll sideways on a phone', overflow <= 0, `${overflow}
 await landing.close();
 
 await browser.close();
+if (own) own.server.close();
+
+console.log(`\n${passed} passed, ${failures.length} failed`);
+if (failures.length) {
+  for (const f of failures) console.log(`  FAIL  ${f}`);
+  process.exitCode = 1;
+}
 

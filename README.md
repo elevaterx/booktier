@@ -48,16 +48,30 @@ per-item link or hover metadata at all.
 Open `index.html` through any static web server (ES modules will not load from `file://`):
 
 ```
-npm run serve       # python3 -m http.server 8777
-# then open http://localhost:8777
+npm run serve       # node tools/serve.mjs, http://localhost:8777
 ```
 
-Run the checks with `npm run smoke` (needs `npx playwright install chromium` once). It drives a
-real browser: drag and drop, keyboard placement, the cover store, PNG output, escaping of hostile
-documents, and a pass with the production Content-Security-Policy applied.
+Run the checks with `npm run smoke` (needs `npx playwright install chromium` once; set
+`CHROMIUM_PATH` if you have a browser it should use instead). It starts its own server, drives a
+real browser — drag and drop, keyboard placement, the cover store, PNG output, share links,
+escaping of hostile documents, a pass with the production Content-Security-Policy applied — and
+**exits non-zero if any check fails**.
 
-Add books one per line as `Title | Author | link | cover image URL`, drag them into tiers, and
-click **Export page**.
+Add books one at a time, or paste a batch as `Title | Author | link | cover image URL` per line.
+Drag them into tiers, then open **Export or share…**:
+
+| | |
+| --- | --- |
+| **Web page** | a standalone `.html` file to host anywhere |
+| **Image** | a `.png` for Reddit or Discord — press **Save covers** first |
+| **Share link** | a URL that rebuilds the list in someone else's browser |
+| **Markdown for Reddit** | every title stays a clickable link inside the post |
+| **JSON** | the document itself, the copy you own |
+
+A share link carries the whole list in the part of the URL after `#`, which browsers never send
+to a server — so whoever hosts the copy you used sees nothing about what you ranked. Opening one
+gives the reader their own editable copy, and their existing list is set aside rather than
+overwritten.
 
 To publish a list whose data lives in a separate file, put the JSON on the same site as the
 editor and open it with `?data=https://your-site/lists/my-list.json`. Documents from other hosts

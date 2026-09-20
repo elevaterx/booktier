@@ -42,7 +42,9 @@ Why these values:
   because stored covers render from local blobs.
 - `connect-src` includes `https:` for `?data=` documents. Remove it if you disable that feature
   (see `SECURITY.md`), and the policy tightens to `'self'`.
-- `frame-src blob:` and `'self'` cover the sandboxed preview iframe.
+- `frame-src` is not needed by the app — the preview renders in this page, not an iframe (see
+  `SECURITY.md`). It is kept only so a copy that adds an embed later does not have to change the
+  header; drop it if you want the tightest policy.
 - `frame-ancestors 'none'` stops your copy being framed inside someone else's page. Only a
   header can set this — the meta tag cannot.
 
@@ -54,8 +56,12 @@ site, give that path its own policy:
 
 ```
 /lists/*
-  Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; img-src https: data:; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; img-src 'self' https: data:; frame-ancestors 'none'
 ```
+
+`'self'` is in `img-src` because an exported list may point at covers you host yourself — the
+`covers/book.jpg` convention in the README — and without it those covers are blocked while remote
+ones load.
 
 Scripts stay forbidden — an exported page has none — so `unsafe-inline` here applies only to
 styles, and the page still cannot execute anything.
@@ -73,6 +79,12 @@ connect a Git repository, and the repo ships the two files it needs:
 Leave the build command empty. Cloudflare still runs `bun install` because a `package.json`
 exists — that only pulls the Playwright devDependency used by the test suite and is harmless.
 
+Custom domains are declared in `wrangler.jsonc` under `routes` with `custom_domain: true`, so a
+deploy creates them and the configuration stays in version control. Cloudflare refuses to create
+one while a DNS record already exists for that hostname — if you moved the domain from another
+registrar, delete the imported parking records for the apex and `www` first, or the deploy fails
+with a conflict.
+
 `_headers` (below) is honored on this path as well as on Pages.
 
 **Cloudflare Pages / Netlify** — `_headers` ships in this repository already, so a connected
@@ -83,7 +95,10 @@ deploy picks it up with no configuration. It contains:
   Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' https: data: blob:; connect-src 'self' https:; font-src 'self'; frame-src 'self' blob:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
   Referrer-Policy: no-referrer
   X-Content-Type-Options: nosniff
-  Permissions-Policy: camera=(), microphone=(), geolocation=()
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Resource-Policy: same-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), interest-cohort=()
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
 ```
 
 **GitHub Pages** — cannot set response headers at all. The `<meta>` policy in `index.html` is
@@ -100,9 +115,11 @@ document root and put this in `.htaccess` beside them:
   Header always set X-Content-Type-Options "nosniff"
 
   # Exported lists carry their styles inline by design — give them their own policy.
-  <FilesMatch "^lists/">
-    Header always set Content-Security-Policy "default-src 'none'; style-src 'unsafe-inline'; img-src https: data:; frame-ancestors 'none'"
-  </FilesMatch>
+  # LocationMatch, not FilesMatch: FilesMatch tests the filename alone, which never contains a
+  # slash, so a "^lists/" pattern there can never match and the override silently does nothing.
+  <LocationMatch "^/lists/">
+    Header always set Content-Security-Policy "default-src 'none'; style-src 'unsafe-inline'; img-src 'self' https: data:; frame-ancestors 'none'"
+  </LocationMatch>
 </IfModule>
 ```
 
@@ -120,6 +137,15 @@ location / {
     add_header Referrer-Policy "no-referrer" always;
     add_header X-Content-Type-Options "nosniff" always;
 }
+
+# Exported lists, same reason as above. add_header does not inherit into a nested location, so
+# every header this path needs is repeated here rather than only the one that differs.
+location /lists/ {
+    root /var/www/booktier;
+    add_header Content-Security-Policy "default-src 'none'; style-src 'unsafe-inline'; img-src 'self' https: data:; frame-ancestors 'none'" always;
+    add_header Referrer-Policy "no-referrer" always;
+    add_header X-Content-Type-Options "nosniff" always;
+}
 ```
 
 **Caddy**
@@ -133,6 +159,8 @@ your-site.example {
         Referrer-Policy "no-referrer"
         X-Content-Type-Options "nosniff"
     }
+    # Exported lists carry their styles inline by design.
+    header /lists/* Content-Security-Policy "default-src 'none'; style-src 'unsafe-inline'; img-src 'self' https: data:; frame-ancestors 'none'"
 }
 ```
 

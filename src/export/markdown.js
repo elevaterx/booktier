@@ -7,6 +7,8 @@
 // Per-tier lines rather than a table: a 59-row table is unreadable on Reddit's mobile app,
 // where most of the audience is.
 
+import { groupByTier, POOL } from '../core/group.js';
+
 // Only what actually breaks Reddit's syntax in running text. Escaping the full markdown
 // character set turns "S+" into "S\\+" and every sentence into a thicket of backslashes —
 // Reddit renders that correctly but it reads terribly if anyone views the raw post.
@@ -38,10 +40,13 @@ export function toMarkdown(doc, opts = {}) {
   if (doc.title) lines.push(`## ${escapeText(doc.title)}`, '');
   if (doc.subtitle) lines.push(escapeText(doc.subtitle), '');
 
+  // groupByTier, not a per-tier filter: an item whose tier id matches no tier — which a
+  // hand-edited or cross-version stored document can easily hold — matched neither the tier
+  // filter nor the "no tier" one, and disappeared from the post without a word.
+  const groups = groupByTier(doc);
+
   for (const tier of doc.tiers) {
-    const items = doc.items
-      .filter((i) => i.tier === tier.id)
-      .sort((a, b) => a.pos - b.pos);
+    const items = groups.get(tier.id) || [];
     if (!items.length) continue;
     const label = escapeText(tier.label);
     const count = showCounts ? ` (${items.length})` : '';
@@ -51,7 +56,7 @@ export function toMarkdown(doc, opts = {}) {
     lines.push(`**${label}**${count} — ${listed}`, '');
   }
 
-  const unranked = doc.items.filter((i) => !i.tier);
+  const unranked = groups.get(POOL) || [];
   if (unranked.length) {
     lines.push(`*Unranked (${unranked.length})* — ${unranked.map(itemMarkdown).join(', ')}`, '');
   }
