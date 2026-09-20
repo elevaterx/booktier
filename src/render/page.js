@@ -18,11 +18,20 @@ function fieldLines(item, render) {
 
 // The hover card is a sibling element shown by CSS on :hover and :focus-visible.
 // It carries no JavaScript so it survives in a saved page with scripting disabled.
-function cardHtml(item, render) {
+//
+// It used to be role="presentation", which meant the author, the note and every extra field were
+// announced to nobody — a sighted user got them on hover and a screen reader user got the title
+// alone. It is referenced with aria-describedby instead: name from the cover, description from
+// the card. A node referenced that way is read even while it is visually hidden.
+function cardId(item, opts) {
+  return `${opts.idPrefix || ''}bt-d-${item.id}`;
+}
+
+function cardHtml(item, render, opts = {}) {
   if (render.tooltip !== 'card') return '';
   const lines = fieldLines(item, render);
   return [
-    '<span class="bt-card" role="presentation">',
+    `<span class="bt-card" id="${escapeHtml(cardId(item, opts))}">`,
     `<span class="bt-card-title">${escapeHtml(item.title)}</span>`,
     item.byline ? `<span class="bt-card-byline">${escapeHtml(item.byline)}</span>` : '',
     lines.length ? `<span class="bt-card-fields">${lines.join('')}</span>` : '',
@@ -55,8 +64,10 @@ export function itemHtml(item, render, opts = {}) {
     : '';
   const cover = `<span class="bt-shell ${hueClass(item.id || item.title)}" role="img" aria-label="${escapeHtml(label)}">${blankText}${img}</span>`;
   const caption = render.showLabels ? `<span class="bt-label">${escapeHtml(item.title)}</span>` : '';
-  const inner = `${cover}${caption}${cardHtml(item, render)}`;
-  const attrs = `class="bt-item" data-id="${escapeHtml(item.id)}"${native}`;
+  const card = cardHtml(item, render, opts);
+  const inner = `${cover}${caption}${card}`;
+  const describedBy = card ? ` aria-describedby="${escapeHtml(cardId(item, opts))}"` : '';
+  const attrs = `class="bt-item" data-id="${escapeHtml(item.id)}"${native}${describedBy}`;
 
   // An anchor when there is a link, a focusable span when there is not — so keyboard users
   // reach the hover card either way. No reviewed tool does this.

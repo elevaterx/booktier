@@ -51,13 +51,19 @@ Open `index.html` through any static web server (ES modules will not load from `
 npm run serve       # node tools/serve.mjs, http://localhost:8777
 ```
 
-Run the checks with `npm run smoke` (needs `npx playwright install chromium` once; set
+Every push and pull request runs `npm run check` and the full suite through GitHub Actions
+(`.github/workflows/check.yml`), so a stale generated file or a regression fails before it can be
+deployed.
+
+Run the checks yourself with `npm run smoke` (needs `npx playwright install chromium` once; set
 `CHROMIUM_PATH` if you have a browser it should use instead). It starts its own server, drives a
 real browser — drag and drop, keyboard placement, the cover store, PNG output, share links,
 escaping of hostile documents, a pass with the production Content-Security-Policy applied — and
 **exits non-zero if any check fails**.
 
-Add books one at a time, or paste a batch as `Title | Author | link | cover image URL` per line.
+Add books one at a time, or paste a batch as `Title | Author | link | cover image URL` per line
+(tabs work too; a comma splits a line only when one is followed by a link, so a title containing a
+comma stays intact).
 Drag them into tiers, then open **Export or share…**:
 
 | | |

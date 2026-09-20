@@ -163,15 +163,26 @@ function addItems(records) {
   if (records.some((r) => r.image)) saveCovers();
 }
 
-// "Title | Author | link | cover url" per line — pipe, tab, or comma separated.
+// "Title | Author | link | cover url" per line — pipe or tab separated.
+//
+// Commas are accepted only when one is followed by a URL. Splitting on any comma turned
+// "Dune, Book 1" into a title and a stray author, and book titles contain commas far more often
+// than anybody pastes comma-separated records without links.
+const COMMA_RECORD = /,\s*(https?:\/\/|www\.)/i;
+
 function parseBulk(text) {
   const out = [];
   for (const raw of text.split('\n')) {
     const line = raw.trim();
     if (!line) continue;
-    const parts = line.includes('|') ? line.split('|') : (line.includes('\t') ? line.split('\t') : line.split(','));
-    const [title, byline, href, cover] = parts.map((p) => (p || '').trim());
+    const parts = line.includes('|') ? line.split('|')
+      : (line.includes('\t') ? line.split('\t')
+        : (COMMA_RECORD.test(line) ? line.split(',') : [line]));
+    let [title, byline, href, cover] = parts.map((p) => (p || '').trim());
     if (!title) continue;
+    // "Title, https://…" means the link, not an author called https. Pasted lists routinely
+    // leave the author out, and putting a URL in the byline is never what anyone meant.
+    if (!href && /^(https?:\/\/|www\.)/i.test(byline)) { href = byline; byline = ''; }
     out.push({ title, byline: byline || '', href: href || '', image: cover ? { src: cover } : null });
   }
   return out;
@@ -500,7 +511,9 @@ function bind() {
   // markup, styles from board.css instead of a copy inlined in the file.
   $('#btn-preview').addEventListener('click', () => {
     const body = $('#previewbody');
-    body.innerHTML = boardHtml(doc, { editable: false, inlineStyles: false });
+    // A second copy of the same board in the same document: prefix the hover-card ids so the
+    // aria-describedby references stay unique and valid.
+    body.innerHTML = boardHtml(doc, { editable: false, inlineStyles: false, idPrefix: 'pv-' });
     for (const label of body.querySelectorAll('.bt-rowlabel[data-color]')) {
       label.style.backgroundColor = label.dataset.color;
     }

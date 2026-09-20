@@ -104,9 +104,26 @@ export function normalizeItem(raw = {}) {
     href: safeHref(raw.href),
     image: normalizeImage(raw.image),
     note: typeof raw.note === 'string' ? raw.note : '',
-    fields: raw.fields && typeof raw.fields === 'object' && !Array.isArray(raw.fields) ? { ...raw.fields } : {},
+    fields: normalizeFields(raw.fields),
   };
   return item;
+}
+
+// A field value arrives from an imported document and goes straight into the hover card. An
+// object rendered as "[object Object]" and an array as "1,2" — so coerce what has an obvious
+// reading and drop what does not.
+function normalizeFields(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+  const out = {};
+  for (const [key, value] of Object.entries(raw)) {
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+      out[key] = value;
+    } else if (Array.isArray(value)) {
+      const flat = value.filter((v) => typeof v === 'string' || typeof v === 'number');
+      if (flat.length) out[key] = flat.join(', ');
+    }
+  }
+  return out;
 }
 
 function normalizeImage(img) {

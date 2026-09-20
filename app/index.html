@@ -177,7 +177,10 @@
 <dialog id="adddialog" class="dlg">
   <form id="addform">
     <h2>Add a book</h2>
-    <label>Title<input name="title" required placeholder="The Primal Hunter"></label>
+    <!-- Not `required`: this form also accepts a pasted batch with no typed title, and browser
+         validation refuses the submit before the handler can read the paste. The handler checks
+         that at least one of the two produced a record. -->
+    <label>Title<input name="title" placeholder="The Primal Hunter"></label>
     <label>Author<input name="byline" placeholder="Zogarth"></label>
     <label>Link<input name="href" placeholder="https://… (Amazon, Royal Road, Goodreads)"></label>
     <label>Cover image URL<input name="cover" placeholder="https://… or covers/book.jpg"></label>
@@ -186,7 +189,8 @@
     <details id="bulkbox">
       <summary>Paste several at once</summary>
       <p class="dlg-hint">One per line: <code>Title | Author | link | cover image URL</code>.
-      Tabs or commas work too; everything after the title is optional.</p>
+      Tabs work too, and everything after the title is optional. Commas only split a line when
+      one is followed by a link — so a title with a comma in it stays one title.</p>
       <textarea name="bulk" rows="6" placeholder="The Primal Hunter | Zogarth | https://… | https://…"></textarea>
     </details>
 

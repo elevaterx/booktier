@@ -1,0 +1,38 @@
+# The suite is only worth having if something runs it. It was written to be able to fail —
+# tools/smoke.mjs counts its checks and exits non-zero — and this is what makes that matter.
+name: check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A superseded run tells you nothing; cancel it rather than pay for it.
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # playwright is the only dependency, pinned exactly, and it is never shipped.
+      - run: npm install --no-audit --no-fund
+
+      - run: npx playwright install --with-deps chromium
+
+      # Fails when the committed index.html, board.css or demo.css is stale relative to its
+      # source. Run first: a stale generated file makes every later failure hard to read.
+      - name: Generated files are current
+        run: npm run check
+
+      # Starts its own static server. 134 checks; any failure exits non-zero.
+      - name: Smoke suite
+        run: node tools/smoke.mjs

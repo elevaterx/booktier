@@ -751,6 +751,73 @@ check('the reading view produces no CSP violations', cspViewViolations.length ==
 check('tier colors survive the strict CSP in the reading view', cspViewColor === 'rgb(255, 223, 127)', cspViewColor);
 await cspView.close();
 
+// ---- fixes from the code review that must not come back ----
+const reviewFixes = await page.evaluate(async () => {
+  const schema = await import('../src/core/schema.js');
+  const { boardHtml } = await import('../src/render/page.js');
+
+  const doc = schema.createDoc({ items: [{ id: 'k', title: 'Titled', byline: 'Writer', note: 'a note',
+    tier: 'a', pos: 0, fields: { hours: 84 } }] });
+  const markup = boardHtml(doc, { editable: false });
+  const prefixed = boardHtml(doc, { editable: false, idPrefix: 'pv-' });
+
+  const coerced = schema.createDoc({ items: [{ title: 'F', fields: {
+    ok: 'yes', n: 12, flag: true, list: ['a', 'b'], nested: { deep: 1 } } }] }).items[0].fields;
+
+  return {
+    describedBy: /aria-describedby="bt-d-k"/.test(markup) && /id="bt-d-k"/.test(markup),
+    noPresentation: !/role="presentation"/.test(markup),
+    prefixIsolated: /aria-describedby="pv-bt-d-k"/.test(prefixed) && !/aria-describedby="bt-d-k"/.test(prefixed),
+    fields: coerced,
+  };
+});
+check('the hover card is described to assistive tech, not hidden from it',
+  reviewFixes.describedBy && reviewFixes.noPresentation);
+check('a second board in the same document gets its own card ids', reviewFixes.prefixIsolated);
+check('a field holding an object or array never renders as [object Object]',
+  reviewFixes.fields.list === 'a, b' && reviewFixes.fields.nested === undefined
+  && reviewFixes.fields.n === 12 && reviewFixes.fields.flag === true,
+  JSON.stringify(reviewFixes.fields));
+
+// a comma inside a title is a title, not a field separator
+await page.click('#btn-add');
+await page.waitForSelector('#adddialog[open]');
+await page.evaluate(() => { document.querySelector('#bulkbox').open = true; });
+await page.fill('#addform [name=bulk]', 'Dune, Book 1\nCradle | Will Wight | https://example.test/c\nSomething, https://example.test/s');
+await page.fill('#addform [name=title]', '');
+await page.click('#addform button[value=done]');
+await page.waitForTimeout(700);
+const bulk = await page.evaluate(() => {
+  const d = JSON.parse(localStorage.getItem('booktier/v1/doc') || '{}');
+  const pick = (t) => (d.items || []).find((i) => i.title === t);
+  return {
+    commaTitle: !!pick('Dune, Book 1'),
+    piped: !!(pick('Cradle') && pick('Cradle').byline === 'Will Wight'),
+    commaRecord: !!(pick('Something') && pick('Something').href === 'https://example.test/s'),
+  };
+});
+check('a title containing a comma survives the bulk paste', bulk.commaTitle);
+check('pipe-separated records still split', bulk.piped);
+check('a comma followed by a URL is still treated as a record', bulk.commaRecord, JSON.stringify(bulk));
+
+// touch drag is enabled on the editor board only — a page made of covers must stay scrollable
+const touch = await page.evaluate(() => {
+  const editorItem = document.querySelector('#board .bt-item');
+  const host = document.createElement('div');
+  host.innerHTML = '<div class="bt-item" style="width:10px;height:10px"></div>';
+  document.body.appendChild(host);
+  const loose = getComputedStyle(host.querySelector('.bt-item')).touchAction;
+  host.remove();
+  return { onBoard: getComputedStyle(editorItem).touchAction, offBoard: loose };
+});
+check('the editor board opts out of touch scrolling so a cover can be dragged', touch.onBoard === 'none', touch.onBoard);
+check('a cover outside the editor keeps the page scrollable on touch', touch.offBoard !== 'none', touch.offBoard);
+
+// CI has to exist, or nothing runs any of this
+const workflow = readFileSync(new URL('../.github/workflows/check.yml', import.meta.url), 'utf8');
+check('a workflow runs the generator check and the suite on every push',
+  /npm run check/.test(workflow) && /tools\/smoke\.mjs/.test(workflow) && /on:\s*\n\s*push:/.test(workflow));
+
 // ---- the deployed header rules must actually do what they claim ----
 // Not browser-testable: Cloudflare composes these, and the suite serves its own headers. What is
 // checkable is the shape, and the shape is where this went wrong — a relaxed policy on a specific

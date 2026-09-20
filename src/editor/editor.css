@@ -81,6 +81,14 @@ body.bt-dragging-active{cursor:grabbing;user-select:none}
 .restore{font-size:12px;padding:3px 9px;border-radius:999px;border:1px solid #e3b341;background:transparent;color:#e3b341;cursor:pointer}
 .restore:hover{background:rgba(227,179,65,.12)}
 
+/* Pointer drag on a touch screen: the browser claims the gesture for scrolling unless the
+   element opts out. Scoped to the editor's board, never to .bt-item generally — the reading
+   view and an exported page are nothing but covers, and trapping the scroll there would make
+   them unreadable on a phone. Scroll the editor by dragging the page outside a cover, or use
+   the per-cover up/down buttons. */
+#board .bt-item{touch-action:none}
+#board .bt-move{touch-action:manipulation}
+
 /* the three-step Reddit flow */
 .steps-num{margin:0 0 6px;padding-left:22px}
 .steps-num li{margin-bottom:16px}
