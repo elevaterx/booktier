@@ -818,6 +818,39 @@ const workflow = readFileSync(new URL('../.github/workflows/check.yml', import.m
 check('a workflow runs the generator check and the suite on every push',
   /npm run check/.test(workflow) && /tools\/smoke\.mjs/.test(workflow) && /on:\s*\n\s*push:/.test(workflow));
 
+// ---- an image export must not need the user to know about the cover store ----
+// The store is per-browser, so a list imported on another machine renders as blank tiles unless
+// something fetches the covers first. That is what happened the first time a real list was
+// exported for Reddit, and it looked like a broken export rather than an empty cache.
+const storeFlow = await page.evaluate(async () => {
+  const covers = await import('../src/io/covers.js');
+  const { createDoc } = await import('../src/core/schema.js');
+  const { toPng } = await import('../src/export/png.js');
+  await covers.clearAll();
+  const src = new URL('../tools/fixtures/cover.png', location.href).href;
+  const doc = createDoc({ title: 'Cold store', items: [{ title: 'Has art', tier: 'a', pos: 0, image: { src } }] });
+
+  const before = await toPng(doc, { scale: 1 });
+  await covers.ensureAll(doc);
+  const after = await toPng(doc, { scale: 1 });
+  const stats = await covers.stats();
+  return { cold: before.missing.length, warm: after.missing.length, stored: stats.count };
+});
+check('an empty store renders the cover as a placeholder', storeFlow.cold === 1, JSON.stringify(storeFlow));
+check('filling the store first puts the art in the image', storeFlow.warm === 0 && storeFlow.stored >= 1, JSON.stringify(storeFlow));
+
+// and a cover-less book must not print its title twice when captions are on
+const doubled = await page.evaluate(async () => {
+  const { createDoc } = await import('../src/core/schema.js');
+  const { toPng } = await import('../src/export/png.js');
+  const doc = createDoc({ title: 'T', items: [{ title: 'No art here', tier: 'a', pos: 0 }] });
+  const plain = await toPng(doc, { scale: 1, labels: false });
+  const labelled = await toPng(doc, { scale: 1, labels: true });
+  return { plain: plain.blob.size, labelled: labelled.blob.size };
+});
+check('a titled caption suppresses the title drawn inside the tile', doubled.plain !== doubled.labelled,
+  `${doubled.plain}b vs ${doubled.labelled}b`);
+
 // ---- the demo's own cover URLs ----
 // The landing page hotlinks these deliberately (see README). The part worth guarding is that
 // they stay as durable as a hotlink can be: https, no cache-buster query string to expire, and

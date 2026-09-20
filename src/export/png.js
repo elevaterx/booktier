@@ -92,11 +92,33 @@ function drawCover(ctx, bitmap, x, y, w, h, radius) {
   ctx.restore();
 }
 
-function drawPlaceholder(ctx, item, x, y, w, h, radius, scale) {
-  ctx.fillStyle = THEME.placeholder;
+// The same eight tints the HTML renderer gives a cover-less item, picked the same way, so a
+// board exported as an image looks like the board on screen.
+const HUES = [
+  ['#5b3a58', '#2a1f33'], ['#2f4f63', '#1b2b3a'], ['#54492c', '#2c2618'], ['#2d5348', '#182f28'],
+  ['#4a3350', '#241a2c'], ['#5a3b34', '#2e1e1a'], ['#37456a', '#1d2338'], ['#3f5230', '#212b19'],
+];
+
+function hueFor(seed) {
+  const text = String(seed || '');
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i += 1) { h ^= text.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return HUES[(h >>> 0) % HUES.length];
+}
+
+// `titled` is false when a caption underneath is already printing the title — otherwise every
+// cover-less book showed its name twice, once inside the box and once below it, which reads as
+// a rendering fault rather than a design.
+function drawPlaceholder(ctx, item, x, y, w, h, radius, scale, titled = true) {
+  const [from, to] = hueFor(item.id || item.title);
+  const gradient = ctx.createLinearGradient(x, y, x + w, y + h);
+  gradient.addColorStop(0, from);
+  gradient.addColorStop(1, to);
+  ctx.fillStyle = gradient;
   roundRect(ctx, x, y, w, h, radius);
   ctx.fill();
-  ctx.fillStyle = THEME.muted;
+  if (!titled) return;
+  ctx.fillStyle = '#e8eaed';
   ctx.font = `600 ${11 * scale}px system-ui, sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
@@ -222,7 +244,7 @@ export async function toPng(doc, { scale = 2, credit = true, labels, numbers = f
       const iy = y + S.pad + line * (itemH + S.gap);
       const bitmap = bitmaps.get(item.id);
       if (bitmap) drawCover(ctx, bitmap, ix, iy, S.coverW, S.coverH, S.radius * 0.6);
-      else drawPlaceholder(ctx, item, ix, iy, S.coverW, S.coverH, S.radius * 0.6, scale);
+      else drawPlaceholder(ctx, item, ix, iy, S.coverW, S.coverH, S.radius * 0.6, scale, !showLabels);
       if (numberOf) drawBadge(ctx, numberOf.get(item.id), ix, iy, scale);
       if (showLabels) {
         ctx.fillStyle = THEME.text;

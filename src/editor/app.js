@@ -31,6 +31,24 @@ function announce(message) { $('#live').textContent = message; }
 // somebody sends you silently destroys work you cannot get back.
 function keepBackup() { return stash(); }
 
+async function refreshStoreInfo() {
+  try {
+    const { count, bytes } = await covers.stats();
+    $('#storeinfo').textContent = count ? `${count} covers stored (${Math.round(bytes / 1024)} KB)` : '';
+  } catch {
+    $('#storeinfo').textContent = 'cover store unavailable in this browser';
+  }
+}
+
+// How many of this list's covers the store actually holds. The image export can only draw from
+// the store, so this is the number that decides whether an exported image has art in it.
+async function coverCoverage() {
+  const wanted = [...new Set(doc.items.map((i) => i.image && i.image.src).filter(Boolean))];
+  if (!wanted.length) return { wanted: 0, held: 0 };
+  const held = await Promise.all(wanted.map((u) => covers.has(u).catch(() => false)));
+  return { wanted: wanted.length, held: held.filter(Boolean).length };
+}
+
 function offerRestore(prefix) {
   const button = $('#btn-restore');
   if (!loadBackup()) { button.hidden = true; return; }
@@ -231,6 +249,25 @@ async function importFile(file) {
   }
 }
 
+// PNG export can only draw covers the store already holds, and a list imported on another
+// machine — or in another browser — arrives with an empty store. Asking the user to know that,
+// and to press Save covers first, is a footgun with a documentation patch over it. Anything that
+// renders an image fills the store itself and says what it could not get.
+async function ensureCoversFirst(button, idleLabel) {
+  const wanted = [...new Set(doc.items.map((i) => i.image && i.image.src).filter(Boolean))];
+  if (!wanted.length) return { missing: 0, failed: 0 };
+  const held = await Promise.all(wanted.map((u) => covers.has(u).catch(() => false)));
+  const absent = wanted.filter((_, n) => !held[n]).length;
+  if (!absent) return { missing: 0, failed: 0 };
+  button.textContent = `Saving covers 0/${absent}`;
+  const summary = await covers.ensureAll(doc, {
+    onProgress: (done, total) => { button.textContent = `Saving covers ${done}/${total}`; },
+  });
+  button.textContent = idleLabel;
+  if (summary.failures.length) console.info('booktier: covers not saved', summary.failures);
+  return { missing: absent, failed: summary.failed };
+}
+
 // Clipboard writes get refused often enough (permissions, insecure origins, older browsers)
 // that the fallback is part of the feature, not an afterthought.
 async function copyField(fieldSel, buttonSel, restoreLabel) {
@@ -375,6 +412,12 @@ function bind() {
     }
     refreshMarkdown();
     $('#mddialog').showModal();
+    const { wanted, held } = await coverCoverage();
+    const line = $('#redditcovers');
+    if (!wanted) line.textContent = 'No covers in this list — the image will be titled tiles.';
+    else if (held >= wanted) line.textContent = `All ${wanted} covers are saved locally, so the image will have art in it.`;
+    else line.textContent = `${wanted - held} of ${wanted} covers are not saved yet. Downloading the image fetches them first.`;
+    line.className = held >= wanted || !wanted ? 'dlg-hint' : 'dlg-hint len-warn';
   });
   $('#md-numbers').addEventListener('change', refreshMarkdown);
   $('#md-link').addEventListener('change', async () => {
@@ -389,15 +432,19 @@ function bind() {
   // without changing what the user's own document or exported page look like.
   $('#btn-reddit-png').addEventListener('click', async () => {
     const button = $('#btn-reddit-png');
-    button.disabled = true; button.textContent = 'Rendering…';
+    button.disabled = true;
     try {
+      const fetched = await ensureCoversFirst(button, 'Download image');
+      button.textContent = 'Rendering…';
       const { blob, width, height, missing } = await toPng(doc, {
         scale: 2, labels: true, numbers: $('#md-numbers').checked,
       });
       download(`${slug(doc.title)}-reddit.png`, blob, 'image/png');
-      status(missing.length
-        ? `Image ready at ${width}×${height}. ${missing.length} cover${missing.length === 1 ? '' : 's'} are not in the store and show as titled placeholders — press Save covers and export again for the full set.`
-        : `Image ready at ${width}×${height}.`, missing.length > 0);
+      const note = missing.length
+        ? ` ${missing.length} cover${missing.length === 1 ? '' : 's'} could not be fetched and show as plain tiles — their host refuses to share the image.`
+        : (fetched.missing ? ` ${fetched.missing} cover${fetched.missing === 1 ? '' : 's'} were fetched first.` : '');
+      status(`Image ready at ${width}×${height}.${note}`, missing.length > 0);
+      await refreshStoreInfo();
     } catch (err) {
       status(`Image export failed: ${err.message}`, true);
     } finally {
@@ -487,20 +534,23 @@ function bind() {
 
   $('#btn-png').addEventListener('click', async () => {
     const button = $('#btn-png');
-    button.disabled = true; button.textContent = 'Rendering…';
+    button.disabled = true;
     try {
+      await ensureCoversFirst(button, 'Image');
+      button.textContent = 'Rendering…';
       const { blob, width, height, missing, noCover } = await toPng(doc, { scale: 2 });
       download(`${slug(doc.title)}.png`, blob, 'image/png');
       // Books with no cover at all are drawn as titled placeholders on purpose. Counting those
       // as failures told people to press Save covers, which could never help them.
       const note = missing.length
-        ? ` ${missing.length} cover${missing.length === 1 ? '' : 's'} are not in the store and appear as placeholders — use Save covers first.`
-        : (noCover.length ? ` ${noCover.length} book${noCover.length === 1 ? '' : 's'} without a cover appear as titled placeholders.` : '');
+        ? ` ${missing.length} cover${missing.length === 1 ? '' : 's'} could not be fetched and appear as plain tiles — their host refuses to share the image.`
+        : (noCover.length ? ` ${noCover.length} book${noCover.length === 1 ? '' : 's'} without a cover appear as titled tiles.` : '');
       status(`Image exported at ${width}×${height}.${note}`, missing.length > 0);
+      await refreshStoreInfo();
     } catch (err) {
       status(`Image export failed: ${err.message}`, true);
     } finally {
-      button.disabled = false; button.textContent = 'Export image';
+      button.disabled = false; button.textContent = 'Image';
     }
   });
 
@@ -591,9 +641,7 @@ async function boot() {
     $('#btn-restore').hidden = !loadBackup();
   }
 
-  covers.stats().then(({ count, bytes }) => {
-    if (count) $('#storeinfo').textContent = `${count} covers stored (${Math.round(bytes / 1024)} KB)`;
-  }).catch(() => { $('#storeinfo').textContent = 'cover store unavailable in this browser'; });
+  refreshStoreInfo();
 }
 
 boot();
