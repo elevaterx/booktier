@@ -8,7 +8,7 @@ import { boardHtml } from '../src/render/page.js';
 import { migrate } from '../src/core/schema.js';
 
 // Override with BOOKTIER_REPO=... if the repo lives somewhere else.
-const REPO = process.env.BOOKTIER_REPO || 'https://github.com/elevaterx/booktier';
+const REPO = process.env.BOOKTIER_REPO || 'https://github.com/elevatevt/booktier';
 
 const root = new URL('../', import.meta.url);
 const template = readFileSync(new URL('src/site/landing.template.html', root), 'utf8');
