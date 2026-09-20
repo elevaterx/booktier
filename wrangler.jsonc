@@ -7,6 +7,11 @@
   "assets": {
     "directory": "."
   },
+  // Keep the free *.workers.dev URL on. It is the address to test against before DNS points at
+  // the custom domain, and a redeploy re-applies whatever this file says — so setting it here
+  // stops a later build from quietly turning it off.
+  "workers_dev": true,
+  "preview_urls": true,
   "observability": {
     "enabled": true
   }
