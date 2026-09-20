@@ -40,6 +40,13 @@ credentials, sends `credentials: 'omit'` and `no-referrer`, times out, and refus
 the stream the moment it passes 1 MB, so a small link cannot inflate into a large document, and
 the result goes through the same `migrate` + `validate` gate as every other import.
 
+**The reading view holds nothing.** `/v/` renders whatever list the visitor's link carries and
+stops there: no fetch, no IndexedDB, no localStorage, and a tighter policy than the editor's
+(`connect-src` and `blob:` are both absent, because it needs neither). No list is ever stored on
+the server, so there is no user content on this origin to defend, moderate or take down. Links
+inside it get `nofollow ugc` in addition to `noopener noreferrer`, and the path is served
+`X-Robots-Tag: noindex`.
+
 **Nothing replaces your list silently.** There is one autosave slot. A share link, a `?data=`
 link, an import and a reset all copy the previous document aside first and offer it back, because
 otherwise a link someone sends you destroys work you cannot recover.

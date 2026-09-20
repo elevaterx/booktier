@@ -44,14 +44,18 @@ function hueClass(seed) {
 export function itemHtml(item, render, opts = {}) {
   const label = [item.title, item.byline].filter(Boolean).join(' — ');
   const native = render.tooltip === 'native' ? ` title="${escapeHtml(label)}"` : '';
-  // A cover-less item shows its title on the placeholder — unless captions are on, in which
-  // case printing it twice is just noise.
-  const blankText = render.showLabels ? '' : `<span class="bt-blank-title">${escapeHtml(item.title || '?')}</span>`;
+  // Every cover sits in a titled shell, and the image is layered over it. A cover that 404s or
+  // whose host starts refusing hotlinks leaves the title showing instead of a blank rectangle —
+  // with no JavaScript, which matters because an exported page and the reading view both run
+  // none, so there is no onerror to fall back on. The title is dropped only when captions are
+  // already printing it underneath.
+  const blankText = render.showLabels ? '' : `<span class="bt-blank-title" aria-hidden="true">${escapeHtml(item.title || '?')}</span>`;
   const img = item.image
-    ? `<img class="bt-cover" src="${escapeHtml(item.image.src)}" alt="${escapeHtml(label)}" loading="lazy" decoding="async" draggable="false">`
-    : `<span class="bt-cover bt-cover-blank ${hueClass(item.id || item.title)}" aria-hidden="true">${blankText}</span>`;
+    ? `<img class="bt-cover" src="${escapeHtml(item.image.src)}" alt="" loading="lazy" decoding="async" draggable="false">`
+    : '';
+  const cover = `<span class="bt-shell ${hueClass(item.id || item.title)}" role="img" aria-label="${escapeHtml(label)}">${blankText}${img}</span>`;
   const caption = render.showLabels ? `<span class="bt-label">${escapeHtml(item.title)}</span>` : '';
-  const inner = `${img}${caption}${cardHtml(item, render)}`;
+  const inner = `${cover}${caption}${cardHtml(item, render)}`;
   const attrs = `class="bt-item" data-id="${escapeHtml(item.id)}"${native}`;
 
   // An anchor when there is a link, a focusable span when there is not — so keyboard users
@@ -112,17 +116,18 @@ export const BOARD_CSS = `
 .bt-items{flex:1;display:flex;flex-wrap:wrap;gap:6px;padding:8px;min-height:calc(var(--bt-cover-w)*1.5 + 8px)}
 .bt-item{position:relative;display:block;width:var(--bt-cover-w);text-decoration:none;color:inherit;border-radius:6px;outline-offset:3px}
 .bt-item:focus-visible{outline:2px solid #6ea8fe}
-.bt-cover{display:block;width:var(--bt-cover-w);height:calc(var(--bt-cover-w)*1.5);object-fit:cover;border-radius:6px;background:#2a2f3a}
-.bt-cover-blank{display:flex;align-items:center;justify-content:center;padding:8px;text-align:center;background:linear-gradient(145deg,#3b4254,#232838)}
+.bt-shell{position:relative;display:flex;align-items:center;justify-content:center;width:var(--bt-cover-w);height:calc(var(--bt-cover-w)*1.5);padding:8px;text-align:center;border-radius:6px;overflow:hidden;background:linear-gradient(145deg,#3b4254,#232838)}
+/* transparent, not a grey plate: a cover that fails to load must reveal the title beneath it */
+.bt-cover{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:cover;background:transparent}
 .bt-blank-title{font-size:11px;line-height:1.25;font-weight:600;color:#e8eaed;overflow:hidden;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical}
-.bt-cover-blank.bt-h0{background:linear-gradient(145deg,#5b3a58,#2a1f33)}
-.bt-cover-blank.bt-h1{background:linear-gradient(145deg,#2f4f63,#1b2b3a)}
-.bt-cover-blank.bt-h2{background:linear-gradient(145deg,#54492c,#2c2618)}
-.bt-cover-blank.bt-h3{background:linear-gradient(145deg,#2d5348,#182f28)}
-.bt-cover-blank.bt-h4{background:linear-gradient(145deg,#4a3350,#241a2c)}
-.bt-cover-blank.bt-h5{background:linear-gradient(145deg,#5a3b34,#2e1e1a)}
-.bt-cover-blank.bt-h6{background:linear-gradient(145deg,#37456a,#1d2338)}
-.bt-cover-blank.bt-h7{background:linear-gradient(145deg,#3f5230,#212b19)}
+.bt-shell.bt-h0{background:linear-gradient(145deg,#5b3a58,#2a1f33)}
+.bt-shell.bt-h1{background:linear-gradient(145deg,#2f4f63,#1b2b3a)}
+.bt-shell.bt-h2{background:linear-gradient(145deg,#54492c,#2c2618)}
+.bt-shell.bt-h3{background:linear-gradient(145deg,#2d5348,#182f28)}
+.bt-shell.bt-h4{background:linear-gradient(145deg,#4a3350,#241a2c)}
+.bt-shell.bt-h5{background:linear-gradient(145deg,#5a3b34,#2e1e1a)}
+.bt-shell.bt-h6{background:linear-gradient(145deg,#37456a,#1d2338)}
+.bt-shell.bt-h7{background:linear-gradient(145deg,#3f5230,#212b19)}
 .bt-label{display:block;font-size:11px;line-height:1.25;margin-top:4px;color:var(--bt-fg);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .bt-card{position:absolute;left:50%;bottom:calc(100% + 8px);transform:translateX(-50%) translateY(4px);width:230px;padding:10px 12px;background:var(--bt-card);color:var(--bt-fg);border:1px solid var(--bt-line);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.35);opacity:0;visibility:hidden;transition:opacity .12s ease,transform .12s ease;z-index:20;pointer-events:none;display:flex;flex-direction:column;gap:3px;text-align:left}
 .bt-item:hover .bt-card,.bt-item:focus-visible .bt-card{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0)}

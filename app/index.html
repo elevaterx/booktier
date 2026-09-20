@@ -107,11 +107,14 @@
   <h2>Share link</h2>
   <p class="dlg-hint">The whole list is encoded in the link after the <code>#</code>, which
   browsers never send to a server — so nobody, including whoever hosts this copy, sees what you
-  ranked. Opening it gives the other person their own editable copy.</p>
+  ranked. By default the link opens a reading page: covers, hover cards and working links, with a
+  button to take a copy into the editor.</p>
   <textarea id="shareout" rows="4" readonly></textarea>
   <p id="sharelen" class="dlg-hint"></p>
   <label class="check"><input type="checkbox" id="share-covers" checked> Include cover images
   (leave off for a much shorter link)</label>
+  <label class="check"><input type="checkbox" id="share-edit"> Open straight in the editor instead
+  of the reading page</label>
   <menu>
     <button type="button" data-close>Close</button>
     <span class="spacer"></span>
@@ -120,19 +123,44 @@
 </dialog>
 
 <dialog id="mddialog" class="dlg dlg-wide">
-  <h2>Markdown for Reddit</h2>
-  <p class="dlg-hint">Every title stays a link when pasted into a Reddit post — no image, no
-  external page needed.</p>
-  <textarea id="mdout" rows="14" readonly></textarea>
+  <h2>Post to Reddit</h2>
+  <p class="dlg-hint">A Reddit post can carry an image or clickable links — never both, whatever
+  tool made it. So post the image, and put the links in the first comment. The number on each
+  cover matches the number beside its title below.</p>
+
+  <ol class="steps-num">
+    <li>
+      <b>Download the image</b>
+      <p>Titles under the covers and a number on each one, so nobody has to squint at the art to
+      work out what a book is.</p>
+      <p><button type="button" id="btn-reddit-png">Download image</button></p>
+    </li>
+    <li>
+      <b>Start an image post on r/litrpg</b>
+      <p>Choose <i>Images</i>, upload the file, give it a title, and post it.</p>
+      <p><button type="button" id="btn-reddit-open">Open r/litrpg</button></p>
+    </li>
+    <li>
+      <b>Paste this as the first comment</b>
+      <textarea id="mdout" rows="10" readonly></textarea>
+      <p id="mdlen" class="dlg-hint"></p>
+      <p><button type="button" id="btn-md-copy" class="primary">Copy comment</button></p>
+    </li>
+  </ol>
+
+  <label class="check"><input type="checkbox" id="md-numbers" checked> Number the covers and the
+  list so they line up</label>
+  <label class="check"><input type="checkbox" id="md-link" checked> Include a link to the full
+  list, where covers and links work together</label>
+
   <menu>
     <button type="button" data-close>Close</button>
     <span class="spacer"></span>
-    <button type="button" id="btn-reddit-post">Open r/litrpg submit</button>
-    <button type="button" id="btn-md-copy" class="primary">Copy to clipboard</button>
+    <button type="button" id="btn-reddit-post">Text post instead</button>
   </menu>
-  <p class="dlg-hint">“Open r/litrpg submit” opens Reddit's post form in a new tab with the title
-  and body filled in. Check the subreddit's rules before posting — and if the body arrives empty,
-  Reddit changed its form: copy the markdown and paste it yourself.</p>
+  <p class="dlg-hint">“Text post instead” opens Reddit's form with the title and this comment
+  already filled in — no image, but every title stays a link. Check the subreddit's rules before
+  posting either way.</p>
 </dialog>
 
 <dialog id="previewdialog" class="dlg dlg-wide">

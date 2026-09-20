@@ -498,6 +498,50 @@ await page.click('#btn-reddit');
 await page.waitForSelector('#mddialog[open]');
 const mdShown = await page.locator('#mdout').inputValue();
 check('the chooser opens the Reddit markdown with the list in it', mdShown.includes('**'), mdShown.slice(0, 40));
+
+// the three-step flow: numbered image, numbered comment, and the two staying in step
+const steps = await page.evaluate(() => ({
+  count: document.querySelectorAll('#mddialog .steps-num > li').length,
+  buttons: ['btn-reddit-png', 'btn-reddit-open', 'btn-md-copy', 'btn-reddit-post']
+    .filter((id) => document.querySelector(`#${id}`)).length,
+}));
+check('the Reddit dialog walks through all three steps', steps.count === 3 && steps.buttons === 4,
+  `${steps.count} steps, ${steps.buttons} buttons`);
+check('the comment carries a link to the reading view', /\/v\/#s=/.test(mdShown));
+check('the comment numbers restart in each tier', /\*\*S\*\*[^\n]*— 1\. /.test(mdShown) && /\*\*A\*\*[^\n]*— 1\. /.test(mdShown),
+  (mdShown.split('\n').find((l) => l.startsWith('**A**')) || '').slice(0, 44));
+
+const lineUp = await page.evaluate(async () => {
+  const { createDoc } = await import('../src/core/schema.js');
+  const { numbering } = await import('../src/core/group.js');
+  const { toMarkdown } = await import('../src/export/markdown.js');
+  const doc = createDoc({ title: 'Numbered', items: [
+    { title: 'Alpha', tier: 'splus', pos: 0 }, { title: 'Beta', tier: 'splus', pos: 1 },
+    { title: 'Gamma', tier: 'a', pos: 0 }, { title: 'Delta', tier: null, pos: 0 },
+  ] });
+  const n = numbering(doc);
+  const md = toMarkdown(doc, { numbers: true });
+  return {
+    perTier: doc.items.map((i) => `${i.title}=${n.get(i.id)}`).join(' '),
+    md: md.replace(/\n+/g, ' | '),
+    poolNumbered: /1\. Delta/.test(md),
+  };
+});
+check('numbering restarts in every tier, pool included', lineUp.perTier === 'Alpha=1 Beta=2 Gamma=1 Delta=1', lineUp.perTier);
+check('the markdown prints the same numbers the image draws', /— 1\. Alpha, 2\. Beta/.test(lineUp.md) && lineUp.poolNumbered, lineUp.md.slice(0, 70));
+
+const numberedPng = await page.evaluate(async () => {
+  const { createDoc } = await import('../src/core/schema.js');
+  const { toPng } = await import('../src/export/png.js');
+  const doc = createDoc({ title: 'Badges', items: [
+    { title: 'One', tier: 'a', pos: 0 }, { title: 'Two', tier: 'a', pos: 1 },
+  ] });
+  const plain = await toPng(doc, { scale: 1, numbers: false, labels: false });
+  const badged = await toPng(doc, { scale: 1, numbers: true, labels: true });
+  return { plain: plain.blob.size, badged: badged.blob.size, taller: badged.height > plain.height };
+});
+check('numbering and labels change what the image renders', numberedPng.badged !== numberedPng.plain && numberedPng.taller,
+  `${numberedPng.plain}b vs ${numberedPng.badged}b`);
 const redditUrl = await page.evaluate(() => {
   const url = new URL('https://www.reddit.com/r/litrpg/submit');
   url.searchParams.set('title', 'Tier & list #1 — 100% done');
@@ -577,6 +621,135 @@ const pngCounts = await page.evaluate(async () => {
 });
 check('books with no cover are not reported as missing covers', pngCounts.missing === 0 && pngCounts.noCover === 2,
   `missing=${pngCounts.missing} noCover=${pngCounts.noCover}`);
+
+// ---- a cover that fails to load must not become a blank box ----
+const fallback = await page.evaluate(async () => {
+  const { createDoc } = await import('../src/core/schema.js');
+  const { pageHtml, boardHtml } = await import('../src/render/page.js');
+  const doc = createDoc({ items: [
+    { title: 'Has a cover', tier: 'a', pos: 0, image: { src: 'https://img.test/a.jpg' } },
+    { title: 'No cover at all', tier: 'a', pos: 1 },
+  ] });
+  const markup = boardHtml(doc, { editable: false, inlineStyles: true });
+  const exported = pageHtml(doc);
+  const host = document.createElement('div');
+  host.innerHTML = markup;
+  document.body.appendChild(host);
+  const shells = [...host.querySelectorAll('.bt-shell')];
+  const out = {
+    shells: shells.length,
+    bothTitled: shells.every((sh) => sh.querySelector('.bt-blank-title')),
+    imgAltEmpty: [...host.querySelectorAll('img.bt-cover')].every((i) => i.getAttribute('alt') === ''),
+    labelled: shells.every((sh) => sh.getAttribute('role') === 'img' && sh.getAttribute('aria-label')),
+    imgTransparent: getComputedStyle(host.querySelector('img.bt-cover')).backgroundColor,
+    exportedHasTitleUnderCover: /bt-blank-title[^>]*>Has a cover/.test(exported),
+  };
+  host.remove();
+  return out;
+});
+check('every cover sits in a titled shell', fallback.shells === 2 && fallback.bothTitled, `${fallback.shells} shells`);
+check('the cover image is transparent so a failed load reveals the title',
+  fallback.imgTransparent === 'rgba(0, 0, 0, 0)', fallback.imgTransparent);
+check('the cover image carries no duplicate alt text', fallback.imgAltEmpty);
+check('the shell is the labeled image for assistive tech', fallback.labelled);
+check('an exported page carries the title under the cover too', fallback.exportedHasTitleUnderCover);
+
+// ---- the reading view ----
+const viewPage = await browser.newPage({ viewport: { width: 1280, height: 1100 } });
+await blockExternal(viewPage);
+viewPage.setDefaultTimeout(10000);
+const viewErrors = [];
+viewPage.on('console', (m) => { if (m.type() === 'error' && !(m.location().url || '').includes('favicon')) viewErrors.push(m.text()); });
+viewPage.on('pageerror', (e) => viewErrors.push(String(e)));
+
+const viewPayload = await page.evaluate(async () => {
+  const sh = await import('../src/io/share.js');
+  const { createDoc } = await import('../src/core/schema.js');
+  return sh.encodeDoc(createDoc({
+    title: 'A borrowed shelf',
+    subtitle: 'ranked by someone else',
+    items: [
+      { title: 'Linked book', tier: 'a', pos: 0, href: 'https://example.test/book', image: { src: 'https://img.test/c.jpg' } },
+      { title: 'Hostile book', tier: 's', pos: 0, href: 'javascript:alert(1)' },
+    ],
+    render: { rel: '', target: '_blank' },
+  }));
+});
+
+await viewPage.goto(`${base}/v/#s=${viewPayload}`, { waitUntil: 'domcontentloaded' });
+await viewPage.waitForSelector('#v-board .bt-item');
+const view = await viewPage.evaluate(() => {
+  const anchor = document.querySelector('#v-board a.bt-item');
+  return {
+    title: document.querySelector('#v-title').textContent,
+    docTitle: document.title,
+    subtitle: document.querySelector('#v-sub').textContent,
+    items: document.querySelectorAll('#v-board .bt-item').length,
+    anchors: document.querySelectorAll('#v-board a.bt-item').length,
+    rel: anchor && anchor.getAttribute('rel'),
+    target: anchor && anchor.getAttribute('target'),
+    hostileIsAnchor: !!document.querySelector('#v-board a[href^="javascript"]'),
+    labelColor: getComputedStyle(document.querySelector('#v-board .bt-row[data-tier="a"] .bt-rowlabel')).backgroundColor,
+    cardWidth: getComputedStyle(document.querySelector('#v-board .bt-card')).width,
+    forkHref: document.querySelector('#v-fork').getAttribute('href'),
+    footShown: !document.querySelector('#v-foot').hidden,
+    errorShown: !document.querySelector('#v-error').hidden,
+    editorChrome: !!document.querySelector('.toolbar, #btn-export, .bt-moves'),
+    storageUsed: (() => { try { return localStorage.length; } catch { return -1; } })(),
+  };
+});
+check('the reading view renders the shared list', view.items === 2 && view.title === 'A borrowed shelf', `${view.items} items, "${view.title}"`);
+check('the reading view sets the document title', view.docTitle.startsWith('A borrowed shelf'), view.docTitle);
+check('the reading view shows the subtitle', view.subtitle === 'ranked by someone else', view.subtitle);
+check('covers are real links in the reading view', view.anchors === 1 && view.target === '_blank', `${view.anchors} anchors`);
+check('reading-view links are nofollow ugc as well as noopener', /noopener/.test(view.rel) && /noreferrer/.test(view.rel) && /nofollow/.test(view.rel) && /ugc/.test(view.rel), view.rel);
+check('a javascript: link never becomes an anchor in the reading view', view.hostileIsAnchor === false);
+check('tier colors apply in the reading view', view.labelColor === 'rgb(255, 223, 127)', view.labelColor);
+check('hover cards are present in the reading view', view.cardWidth === '230px', view.cardWidth);
+check('the reading view carries no editor chrome', view.editorChrome === false);
+check('the reading view writes nothing to browser storage', view.storageUsed === 0, `${view.storageUsed} keys`);
+check('the reading view offers the list to the editor', view.forkHref === `../app/#s=${viewPayload}`, (view.forkHref || '').slice(0, 24));
+check('the reading view shows no error state on a good link', view.errorShown === false);
+check('the reading view logs no console errors', viewErrors.length === 0, viewErrors.slice(0, 2).join(' | '));
+
+// forking really does open the editor on that list
+await viewPage.click('#v-fork');
+await viewPage.waitForSelector('#board .bt-item');
+const forked = await viewPage.evaluate(() => document.querySelector('#title').value);
+check('opening it in the editor loads the same list', forked === 'A borrowed shelf', forked);
+
+// a truncated or missing payload has to say so rather than render an empty board
+await viewPage.goto(`${base}/v/`, { waitUntil: 'domcontentloaded' });
+await viewPage.waitForSelector('#v-error:not([hidden])');
+const emptyView = await viewPage.evaluate(() => document.querySelector('#v-error-title').textContent);
+check('a link with no list says so', /no list in this link/i.test(emptyView), emptyView);
+await viewPage.goto(`${base}/v/#s=zBROKEN`, { waitUntil: 'domcontentloaded' });
+await viewPage.reload({ waitUntil: 'domcontentloaded' });   // fragment-only change never re-runs the module
+await viewPage.waitForSelector('#v-error:not([hidden])');
+const brokenView = await viewPage.evaluate(() => document.querySelector('#v-error-body').textContent);
+check('a damaged link explains itself instead of rendering nothing', /truncated/.test(brokenView), brokenView.slice(0, 50));
+await viewPage.close();
+
+// the reading view must hold up under the production CSP, same as the editor
+const cspView = await browser.newPage({ viewport: { width: 1280, height: 1100 } });
+await cspView.route('**/*', async (route) => {
+  const url = route.request().url();
+  if (!url.startsWith(base)) {
+    if (route.request().resourceType() === 'image') return route.fulfill({ status: 200, contentType: 'image/png', body: STUB_PNG });
+    return route.abort();
+  }
+  const res = await route.fetch();
+  const headers = { ...res.headers(), 'content-security-policy': POLICY };
+  return route.fulfill({ response: res, headers });
+});
+const cspViewViolations = [];
+cspView.on('console', (m) => { if (/Content Security Policy|Refused to/.test(m.text())) cspViewViolations.push(m.text().slice(0, 120)); });
+await cspView.goto(`${base}/v/#s=${viewPayload}`, { waitUntil: 'domcontentloaded' });
+await cspView.waitForSelector('#v-board .bt-item');
+const cspViewColor = await cspView.evaluate(() => getComputedStyle(document.querySelector('#v-board .bt-row[data-tier="a"] .bt-rowlabel')).backgroundColor);
+check('the reading view produces no CSP violations', cspViewViolations.length === 0, cspViewViolations.slice(0, 2).join(' | '));
+check('tier colors survive the strict CSP in the reading view', cspViewColor === 'rgb(255, 223, 127)', cspViewColor);
+await cspView.close();
 
 // ---- landing page ----
 const landing = await browser.newPage({ viewport: { width: 1280, height: 1100 } });

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<!-- Tighter than the editor's: this page fetches nothing, stores nothing, and renders no blobs. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' https: data:; font-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%232b5cd7'/%3E%3Crect x='3' y='3' width='4' height='10' rx='1' fill='%23fff'/%3E%3Crect x='9' y='6' width='4' height='7' rx='1' fill='%23fff'/%3E%3C/svg%3E">
+<title>A tier list — booktier</title>
+<link rel="stylesheet" href="../src/render/board.css">
+<link rel="stylesheet" href="../src/view/view.css">
+</head>
+<body>
+
+<main class="v-wrap">
+  <header class="v-head">
+    <h1 id="v-title" class="v-title">Opening…</h1>
+    <p id="v-sub" class="v-sub" hidden></p>
+  </header>
+
+  <div id="v-board" class="v-board"></div>
+
+  <section id="v-error" class="v-error" hidden>
+    <h2 id="v-error-title">This link did not open</h2>
+    <p id="v-error-body"></p>
+    <p><a class="v-btn v-btn-primary" href="../app/">Build a list of your own</a></p>
+  </section>
+
+  <footer id="v-foot" class="v-foot" hidden>
+    <p class="v-actions">
+      <a id="v-fork" class="v-btn v-btn-primary" href="../app/">Open this list in the editor</a>
+      <a class="v-btn" href="../">What is booktier?</a>
+    </p>
+    <p class="v-note">This list travels inside the link itself — the part after the
+    <code>#</code>, which your browser never sends to any server. Nothing here was uploaded, and
+    nothing about it is stored.</p>
+  </footer>
+</main>
+
+<script type="module" src="../src/view/view.js"></script>
+</body>
+</html>

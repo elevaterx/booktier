@@ -310,7 +310,12 @@ function bind() {
   async function refreshShare() {
     const out = $('#shareout');
     try {
-      const url = await shareUrl(doc, { covers: $('#share-covers').checked });
+      // The reading page by default. A link handed to someone else should open something
+      // finished, not a workspace — the editor is one button away from there.
+      const base = $('#share-edit').checked
+        ? location.href.split('#')[0]
+        : new URL('../v/', location.href).href;
+      const url = await shareUrl(doc, { base, covers: $('#share-covers').checked });
       out.value = url;
       const advice = lengthAdvice(url.length);
       $('#sharelen').textContent = `${url.length.toLocaleString()} characters. ${advice.text}`;
@@ -327,15 +332,70 @@ function bind() {
     $('#sharedialog').showModal();
   });
   $('#share-covers').addEventListener('change', refreshShare);
+  $('#share-edit').addEventListener('change', refreshShare);
   $('#btn-share-copy').addEventListener('click', () => copyField('#shareout', '#btn-share-copy', 'Copy link'));
 
   // Reddit renders markdown links, so this is the one share path where the links survive the
   // post itself. Shown in a dialog as well as copied: clipboard writes can be refused, and a
   // silent failure here looks like the button does nothing.
-  $('#btn-reddit').addEventListener('click', () => {
+  // The reading-view link that goes in the comment. Built once when the dialog opens rather than
+  // on every keystroke of the two checkboxes, because compressing a 59-item list is not free.
+  let redditViewUrl = '';
+
+  function refreshMarkdown() {
+    const text = toMarkdown(doc, {
+      numbers: $('#md-numbers').checked,
+      viewUrl: $('#md-link').checked ? redditViewUrl : '',
+    });
+    $('#mdout').value = text;
+    const over = text.length > 10000;
+    $('#mdlen').textContent = over
+      ? `${text.length.toLocaleString()} characters — Reddit caps a comment at 10,000. Turn off the link, or split the tiers across two comments.`
+      : `${text.length.toLocaleString()} characters.`;
+    $('#mdlen').className = over ? 'dlg-hint len-error' : 'dlg-hint';
+  }
+
+  $('#btn-reddit').addEventListener('click', async () => {
     $('#exportdialog').close();
-    $('#mdout').value = toMarkdown(doc);
+    redditViewUrl = '';
+    if ($('#md-link').checked) {
+      try { redditViewUrl = await shareUrl(doc, { base: new URL('../v/', location.href).href }); }
+      catch { /* a list too large to encode simply goes without the link */ }
+    }
+    refreshMarkdown();
     $('#mddialog').showModal();
+  });
+  $('#md-numbers').addEventListener('change', refreshMarkdown);
+  $('#md-link').addEventListener('change', async () => {
+    if ($('#md-link').checked && !redditViewUrl) {
+      try { redditViewUrl = await shareUrl(doc, { base: new URL('../v/', location.href).href }); }
+      catch { /* leave it out */ }
+    }
+    refreshMarkdown();
+  });
+
+  // The image for step 1 is always labeled and numbered — that is the whole point of this flow —
+  // without changing what the user's own document or exported page look like.
+  $('#btn-reddit-png').addEventListener('click', async () => {
+    const button = $('#btn-reddit-png');
+    button.disabled = true; button.textContent = 'Rendering…';
+    try {
+      const { blob, width, height, missing } = await toPng(doc, {
+        scale: 2, labels: true, numbers: $('#md-numbers').checked,
+      });
+      download(`${slug(doc.title)}-reddit.png`, blob, 'image/png');
+      status(missing.length
+        ? `Image ready at ${width}×${height}. ${missing.length} cover${missing.length === 1 ? '' : 's'} are not in the store and show as titled placeholders — press Save covers and export again for the full set.`
+        : `Image ready at ${width}×${height}.`, missing.length > 0);
+    } catch (err) {
+      status(`Image export failed: ${err.message}`, true);
+    } finally {
+      button.disabled = false; button.textContent = 'Download image';
+    }
+  });
+
+  $('#btn-reddit-open').addEventListener('click', () => {
+    window.open('https://www.reddit.com/r/litrpg/submit', '_blank', 'noopener,noreferrer');
   });
 
   // Reddit's submit form takes the title and body as query parameters. Opened in a new tab with
@@ -352,7 +412,7 @@ function bind() {
     }
     window.open(url.href, '_blank', 'noopener,noreferrer');
   });
-  $('#btn-md-copy').addEventListener('click', () => copyField('#mdout', '#btn-md-copy', 'Copy to clipboard'));
+  $('#btn-md-copy').addEventListener('click', () => copyField('#mdout', '#btn-md-copy', 'Copy comment'));
 
   $('#itemform').addEventListener('submit', (e) => {
     if (e.submitter && e.submitter.value === 'delete') {

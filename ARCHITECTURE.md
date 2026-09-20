@@ -143,6 +143,15 @@ reading list in someone's access log. Measured on a real 59-item list: 3.1 KB wi
 without, 0.9 KB for the ranking alone. The share dialog shows the length and says plainly where a
 link of that size stops being reliable, rather than truncating silently.
 
+A share link opens `/v/` — the reading view — rather than the editor. Handing someone a workspace
+when they asked to look at a list is the wrong artifact, and the reading view is the whole
+publishing story for this project: it renders the list the visitor's own link carries, fetches
+nothing, writes nothing to browser storage, and puts no user content on the server, so there is no
+service to run, nothing to moderate and nothing to take down. Links in it render with
+`nofollow ugc` on top of the forced `noopener noreferrer`, because they are someone else's links
+on this domain; a page the user exports and hosts themselves keeps passing link equity, since
+there it is their own site.
+
 Two rules the loader keeps: the decompressed side is capped as it streams (a small fragment can
 otherwise inflate into an arbitrarily large document), and the result goes through the same
 `migrate` + `validate` gate as any other import. The fragment is cleared from the address bar once

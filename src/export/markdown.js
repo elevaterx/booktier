@@ -7,7 +7,7 @@
 // Per-tier lines rather than a table: a 59-row table is unreadable on Reddit's mobile app,
 // where most of the audience is.
 
-import { groupByTier, POOL } from '../core/group.js';
+import { groupByTier, POOL, numbering } from '../core/group.js';
 
 // Only what actually breaks Reddit's syntax in running text. Escaping the full markdown
 // character set turns "S+" into "S\\+" and every sentence into a thicket of backslashes —
@@ -23,19 +23,26 @@ function safeUrl(href) {
   return String(href || '').replace(/\(/g, '%28').replace(/\)/g, '%29');
 }
 
-function itemMarkdown(item) {
+function itemMarkdown(item, number) {
   const title = escapeText(item.title);
-  return item.href ? `[${title}](${safeUrl(item.href)})` : title;
+  const linked = item.href ? `[${title}](${safeUrl(item.href)})` : title;
+  // The number is outside the link text so it reads as an index, not part of the book's name.
+  return number ? `${number}. ${linked}` : linked;
 }
 
 /**
  * @param {object} doc
- * @param {{credit?: boolean, showCounts?: boolean, byline?: boolean}} [opts]
+ * @param {{credit?: boolean, showCounts?: boolean, byline?: boolean, numbers?: boolean,
+ *          viewUrl?: string}} [opts]
  * @returns {string} markdown ready to paste into a Reddit post
  */
 export function toMarkdown(doc, opts = {}) {
-  const { credit = true, showCounts = true, byline = false } = opts;
+  const { credit = true, showCounts = true, byline = false, numbers = false, viewUrl = '' } = opts;
   const lines = [];
+  // Same numbering the image draws on the covers — one function, so a reader who looks up "S+ 4"
+  // in the comment lands on the cover that carries a 4.
+  const numberOf = numbers ? numbering(doc) : null;
+  const num = (item) => (numberOf ? numberOf.get(item.id) : 0);
 
   if (doc.title) lines.push(`## ${escapeText(doc.title)}`, '');
   if (doc.subtitle) lines.push(escapeText(doc.subtitle), '');
@@ -51,16 +58,20 @@ export function toMarkdown(doc, opts = {}) {
     const label = escapeText(tier.label);
     const count = showCounts ? ` (${items.length})` : '';
     const listed = items
-      .map((i) => (byline && i.byline ? `${itemMarkdown(i)} — ${escapeText(i.byline)}` : itemMarkdown(i)))
+      .map((i) => (byline && i.byline ? `${itemMarkdown(i, num(i))} — ${escapeText(i.byline)}` : itemMarkdown(i, num(i))))
       .join(', ');
     lines.push(`**${label}**${count} — ${listed}`, '');
   }
 
   const unranked = groups.get(POOL) || [];
   if (unranked.length) {
-    lines.push(`*Unranked (${unranked.length})* — ${unranked.map(itemMarkdown).join(', ')}`, '');
+    lines.push(`*Unranked (${unranked.length})* — ${unranked.map((i) => itemMarkdown(i, num(i))).join(', ')}`, '');
   }
 
+  if (numberOf) lines.push('*Numbers match the covers in the image.*', '');
+  // The reading view is the only place a Reddit reader gets covers and working links together —
+  // the post itself can carry one or the other, never both.
+  if (viewUrl) lines.push(`[Open the full list — covers, links, hover details](${safeUrl(viewUrl)})`, '');
   if (doc.render && doc.render.caption) lines.push(escapeText(doc.render.caption), '');
   if (credit) lines.push('^(made with booktier.org)');
 

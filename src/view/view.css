@@ -1,0 +1,20 @@
+/* The reading view. Board styles come from board.css; this is page chrome only. */
+*{box-sizing:border-box}
+body{margin:0;background:var(--bt-bg);color:var(--bt-fg);font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+.v-wrap{max-width:1100px;margin:0 auto;padding:28px 16px 48px}
+.v-head{margin-bottom:18px}
+.v-title{margin:0 0 4px;font-size:27px;line-height:1.2;letter-spacing:-.01em}
+.v-sub{margin:0;color:var(--bt-muted);font-size:14px}
+.v-board{margin-bottom:26px}
+.v-foot{border-top:1px solid var(--bt-line);padding-top:16px}
+.v-actions{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 12px}
+.v-note{margin:0;color:var(--bt-muted);font-size:12.5px;max-width:62ch}
+.v-note code{font-size:12px}
+.v-btn{display:inline-block;font:inherit;padding:8px 14px;border-radius:8px;border:1px solid var(--bt-line);background:var(--bt-card);color:var(--bt-fg);text-decoration:none}
+.v-btn:hover{border-color:#6ea8fe}
+.v-btn-primary{background:#2b5cd7;border-color:#2b5cd7;color:#fff}
+.v-btn-primary:hover{background:#3a6ae8;border-color:#3a6ae8}
+.v-error{border:1px solid var(--bt-line);border-radius:12px;background:var(--bt-card);padding:20px;max-width:56ch}
+.v-error h2{margin:0 0 8px;font-size:17px}
+.v-error p{margin:0 0 14px;color:var(--bt-muted);font-size:14px}
+@media (max-width:640px){.v-wrap{padding:20px 16px 40px}.v-title{font-size:22px}}

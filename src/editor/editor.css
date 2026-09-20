@@ -80,3 +80,11 @@ body.bt-dragging-active{cursor:grabbing;user-select:none}
 /* restoring a list a shared link displaced */
 .restore{font-size:12px;padding:3px 9px;border-radius:999px;border:1px solid #e3b341;background:transparent;color:#e3b341;cursor:pointer}
 .restore:hover{background:rgba(227,179,65,.12)}
+
+/* the three-step Reddit flow */
+.steps-num{margin:0 0 6px;padding-left:22px}
+.steps-num li{margin-bottom:16px}
+.steps-num li::marker{color:var(--bt-muted);font-weight:700}
+.steps-num b{display:block;margin-bottom:2px}
+.steps-num p{margin:2px 0 8px;font-size:12.5px;line-height:1.45;color:var(--bt-muted)}
+.steps-num textarea{margin-top:6px}

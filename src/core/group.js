@@ -45,3 +45,22 @@ export function countsByTier(doc) {
   for (const [key, list] of groups) out[key] = list.length;
   return out;
 }
+
+/**
+ * Item id -> the number printed on its cover and beside its title in a Reddit comment.
+ *
+ * One function, two exporters: the image and the markdown are posted together and a reader uses
+ * the number to get from one to the other, so they cannot be allowed to drift. Numbering
+ * restarts in each tier — "S+ 1-7" reads cleanly on a cover, where a run to 59 does not.
+ *
+ * @returns {Map<string, number>}
+ */
+export function numbering(doc) {
+  const groups = groupByTier(doc);
+  const order = [...doc.tiers.map((t) => t.id), POOL];
+  const out = new Map();
+  for (const key of order) {
+    (groups.get(key) || []).forEach((item, i) => out.set(item.id, i + 1));
+  }
+  return out;
+}

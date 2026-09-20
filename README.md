@@ -64,14 +64,23 @@ Drag them into tiers, then open **Export or share…**:
 | --- | --- |
 | **Web page** | a standalone `.html` file to host anywhere |
 | **Image** | a `.png` for Reddit or Discord — press **Save covers** first |
-| **Share link** | a URL that rebuilds the list in someone else's browser |
-| **Markdown for Reddit** | every title stays a clickable link inside the post |
+| **Share link** | a URL that opens the list as a finished reading page in someone else's browser |
+| **Post to Reddit** | a three-step flow: a numbered, titled image, then the matching link list as the first comment |
 | **JSON** | the document itself, the copy you own |
 
+A Reddit post can carry an image **or** clickable links, never both — that is Reddit's limit, not
+booktier's. So the Reddit flow splits them: an image with the title under each cover and a number
+on it, and a first comment carrying the same numbers beside real links. A reader sees a cover they
+like, reads its number, and finds the link. The comment also links to the reading view, which is
+the only place the two come back together.
+
 A share link carries the whole list in the part of the URL after `#`, which browsers never send
-to a server — so whoever hosts the copy you used sees nothing about what you ranked. Opening one
-gives the reader their own editable copy, and their existing list is set aside rather than
-overwritten.
+to a server — so whoever hosts the copy you used sees nothing about what you ranked. It opens the
+**reading view** at `/v/`: the board with working links and hover cards, no editing chrome, and a
+button to take a copy into the editor. That page fetches nothing and writes nothing to browser
+storage. Anyone taking a copy has their own existing list set aside rather than overwritten.
+
+This is the whole publishing story: no account, no upload, no server holding anyone's list.
 
 To publish a list whose data lives in a separate file, put the JSON on the same site as the
 editor and open it with `?data=https://your-site/lists/my-list.json`. Documents from other hosts

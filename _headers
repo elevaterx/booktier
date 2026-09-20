@@ -10,6 +10,12 @@
   Permissions-Policy: camera=(), microphone=(), geolocation=(), interest-cohort=()
   Strict-Transport-Security: max-age=31536000; includeSubDomains
 
+# The reading view renders whatever list the visitor's own link carries. Nothing is stored here
+# and every list looks like the same URL to a crawler, but the links in it are user-submitted, so
+# the path is kept out of the index the same way any site treats user content.
+/v/*
+  X-Robots-Tag: noindex
+
 # Exported lists are self-contained files and carry their styles inline by design, so they need
 # a looser style rule. Scripts stay forbidden — an exported page has none.
 /lists/*

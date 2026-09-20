@@ -5,7 +5,7 @@
 // off a canvas is exactly what browsers refuse, so an exporter that reached for the network
 // would fail at the moment of saving. Anything not in the store becomes a labeled placeholder.
 
-import { groupByTier, POOL } from '../core/group.js';
+import { groupByTier, POOL, numbering } from '../core/group.js';
 import { bitmapFor } from '../io/covers.js';
 
 const THEME = {
@@ -106,6 +106,28 @@ function drawPlaceholder(ctx, item, x, y, w, h, radius, scale) {
   for (const line of lines) { ctx.fillText(line, x + w / 2, ty); ty += lineHeight; }
 }
 
+// The number a reader uses to get from a cover in the image to its link in the comment below it.
+// Drawn over the corner of the cover, on a plate dark enough to stay legible on any artwork.
+function drawBadge(ctx, value, x, y, scale) {
+  if (!value) return;
+  const text = String(value);
+  const h = 17 * scale;
+  ctx.font = `700 ${11 * scale}px system-ui, sans-serif`;
+  const w = Math.max(h, ctx.measureText(text).width + 10 * scale);
+  ctx.save();
+  ctx.fillStyle = 'rgba(8,10,14,.82)';
+  roundRect(ctx, x + 3 * scale, y + 3 * scale, w, h, 5 * scale);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,.28)';
+  ctx.lineWidth = Math.max(1, scale * 0.5);
+  ctx.stroke();
+  ctx.fillStyle = '#f2f4f8';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, x + 3 * scale + w / 2, y + 3 * scale + h / 2 + scale * 0.5);
+  ctx.restore();
+}
+
 /**
  * Render the document to a PNG blob.
  * `missing` is covers the item HAS but the store does not — the ones "Save covers" can fix.
@@ -113,8 +135,12 @@ function drawPlaceholder(ctx, item, x, y, w, h, radius, scale) {
  * not exist is a false error, which is what the old single list produced.
  * @returns {Promise<{blob: Blob, width: number, height: number, missing: Array<{title:string,src:string}>, noCover: string[]}>}
  */
-export async function toPng(doc, { scale = 2, credit = true } = {}) {
+export async function toPng(doc, { scale = 2, credit = true, labels, numbers = false } = {}) {
   const S = Object.fromEntries(Object.entries(BASE).map(([k, v]) => [k, v * scale]));
+  // Overrides rather than document edits: the Reddit flow wants titles and numbers on the image
+  // without changing what the user's exported page or saved document look like.
+  const showLabels = labels === undefined ? doc.render.showLabels : labels;
+  const numberOf = numbers ? numbering(doc) : null;
   const groups = groupByTier(doc);
   const rows = doc.tiers.map((tier) => ({ tier, items: groups.get(tier.id) || [] }));
   const pool = groups.get(POOL) || [];
@@ -140,7 +166,7 @@ export async function toPng(doc, { scale = 2, credit = true } = {}) {
   const headerH = S.titleSize * 1.4 + (doc.subtitle ? S.subSize * 1.8 : 0) + S.pad * 2;
   const rowHeights = rows.map((row) => {
     const lines = Math.max(1, Math.ceil(row.items.length / perRow));
-    const itemH = S.coverH + (doc.render.showLabels ? CAPTION_BLOCK(S) : 0);
+    const itemH = S.coverH + (showLabels ? CAPTION_BLOCK(S) : 0);
     return Math.max(itemH + S.pad * 2, lines * itemH + (lines - 1) * S.gap + S.pad * 2);
   });
   const footerH = (credit || (doc.render && doc.render.caption)) ? S.subSize * 2.4 : S.pad;
@@ -188,7 +214,7 @@ export async function toPng(doc, { scale = 2, credit = true } = {}) {
     ctx.textBaseline = 'middle';
     ctx.fillText(String(row.tier.label || ''), S.pad + S.labelW / 2, y + rowH / 2);
 
-    const itemH = S.coverH + (doc.render.showLabels ? CAPTION_BLOCK(S) : 0);
+    const itemH = S.coverH + (showLabels ? CAPTION_BLOCK(S) : 0);
     row.items.forEach((item, i) => {
       const col = i % perRow;
       const line = Math.floor(i / perRow);
@@ -197,7 +223,8 @@ export async function toPng(doc, { scale = 2, credit = true } = {}) {
       const bitmap = bitmaps.get(item.id);
       if (bitmap) drawCover(ctx, bitmap, ix, iy, S.coverW, S.coverH, S.radius * 0.6);
       else drawPlaceholder(ctx, item, ix, iy, S.coverW, S.coverH, S.radius * 0.6, scale);
-      if (doc.render.showLabels) {
+      if (numberOf) drawBadge(ctx, numberOf.get(item.id), ix, iy, scale);
+      if (showLabels) {
         ctx.fillStyle = THEME.text;
         ctx.font = `${S.captionSize}px system-ui, sans-serif`;
         ctx.textAlign = 'center';
