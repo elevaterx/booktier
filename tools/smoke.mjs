@@ -54,6 +54,19 @@ await page.goto(app, { waitUntil: 'domcontentloaded' });
 await page.waitForSelector('#board .bt-item');
 
 
+// Playwright's waitForFunction installs a polling harness that needs 'unsafe-eval'. The app's
+// own CSP forbids it, and whether that trips depends on the Playwright version — 1.63 gets away
+// with it, 1.50 does not. That is precisely how a green local run turned into a red CI run.
+// page.evaluate needs no such thing, so poll with that and stay version-proof.
+const waitUntil = async (target, fn, timeout = 10000) => {
+  const started = Date.now();
+  for (;;) {
+    if (await target.evaluate(fn)) return true;
+    if (Date.now() - started > timeout) return false;
+    await target.waitForTimeout(100);
+  }
+};
+
 let passed = 0;
 const failures = [];
 const check = (name, cond, extra = '') => {
@@ -454,7 +467,7 @@ sharePage.setDefaultTimeout(10000);
 await sharePage.goto(app, { waitUntil: 'domcontentloaded' });
 await sharePage.waitForSelector('#board .bt-item');
 // persist() is debounced, so the autosave key does not exist the instant the board renders.
-await sharePage.waitForFunction(() => !!localStorage.getItem('booktier/v1/doc'));
+await waitUntil(sharePage, () => !!localStorage.getItem('booktier/v1/doc'));
 await sharePage.evaluate(() => {
   const doc = JSON.parse(localStorage.getItem('booktier/v1/doc'));
   doc.title = 'MY IRREPLACEABLE LIST';
@@ -481,7 +494,7 @@ check('the fragment is cleared so a reload keeps your edits', afterShare.hash ==
 check('the reader’s own list is kept, not overwritten', afterShare.backup && afterShare.backup.title === 'MY IRREPLACEABLE LIST', afterShare.backup && afterShare.backup.title);
 check('the reader is offered their list back', afterShare.restoreShown);
 await sharePage.click('#btn-restore');
-await sharePage.waitForFunction(() => document.querySelector('#title').value === 'MY IRREPLACEABLE LIST').catch(() => {});
+await waitUntil(sharePage, () => document.querySelector('#title').value === 'MY IRREPLACEABLE LIST');
 const restored = await sharePage.evaluate(() => document.querySelector('#title').value);
 check('restore brings the reader’s list back', restored === 'MY IRREPLACEABLE LIST', restored);
 await sharePage.close();
