@@ -112,7 +112,16 @@ the repo.
 
 **On hotlinking:** the URLs rotate, and nobody has promised you a license to display retailer
 cover art. Saving a copy locally is what the store does; publishing those copies is a separate
-decision, and the repo ships no cover images.
+decision, and the repo ships no cover images — including for the demo on the landing page, which
+hotlinks its covers like any other list.
+
+That is a deliberate choice rather than an oversight. Committing the demo art would remove a
+third-party dependency from the front page, but it would also mean redistributing cover art from a
+public repository, which is the thing the paragraph above declines to do. The two costs are not
+equal. What the dependency can actually cost is now bounded: a cover that fails to load shows the
+book's title instead of an empty box, so the worst case is a demo that reads as plainly as it
+looks. The demo URLs carry no `?time=` cache-buster — verified unnecessary against the live CDN,
+with a control — so there is one less moving part to rot.
 
 ## Data format
 

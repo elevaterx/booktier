@@ -3,44 +3,151 @@
   "title": "LitRPG — a starting shelf",
   "subtitle": "Example data. Replace it with your own: Add books, or Import a JSON file.",
   "tiers": [
-    { "id": "splus", "label": "S+", "color": "#ff7f7f" },
-    { "id": "s", "label": "S", "color": "#ffbf7f" },
-    { "id": "a", "label": "A", "color": "#ffdf7f" },
-    { "id": "b", "label": "B", "color": "#ffff7f" },
-    { "id": "c", "label": "C", "color": "#bfff7f" }
+    {
+      "id": "splus",
+      "label": "S+",
+      "color": "#ff7f7f"
+    },
+    {
+      "id": "s",
+      "label": "S",
+      "color": "#ffbf7f"
+    },
+    {
+      "id": "a",
+      "label": "A",
+      "color": "#ffdf7f"
+    },
+    {
+      "id": "b",
+      "label": "B",
+      "color": "#ffff7f"
+    },
+    {
+      "id": "c",
+      "label": "C",
+      "color": "#bfff7f"
+    }
   ],
   "items": [
-    { "id": "primal-hunter", "tier": "splus", "pos": 0, "title": "The Primal Hunter", "byline": "Zogarth",
+    {
+      "id": "primal-hunter",
+      "tier": "splus",
+      "pos": 0,
+      "title": "The Primal Hunter",
+      "byline": "Zogarth",
       "href": "https://www.royalroad.com/fiction/36049/the-primal-hunter",
-      "image": { "src": "https://www.royalroadcdn.com/public/covers-full/36049-the-primal-hunter.jpg?time=1641580443" },
-      "note": "System apocalypse, heavy stat focus.", "fields": { "origin": "Royal Road" } },
-    { "id": "beware-chicken", "tier": "splus", "pos": 1, "title": "Beware of Chicken", "byline": "Casualfarmer",
+      "image": {
+        "src": "https://www.royalroadcdn.com/public/covers-full/36049-the-primal-hunter.jpg"
+      },
+      "note": "System apocalypse, heavy stat focus.",
+      "fields": {
+        "origin": "Royal Road"
+      }
+    },
+    {
+      "id": "beware-chicken",
+      "tier": "splus",
+      "pos": 1,
+      "title": "Beware of Chicken",
+      "byline": "Casualfarmer",
       "href": "https://www.royalroad.com/fiction/39408/beware-of-chicken",
-      "image": { "src": "https://www.royalroadcdn.com/public/covers-full/beware-of-chicken-aacav1xoeg8.jpg?time=1610566797" },
-      "note": "Cultivation, but the farm is the point.", "fields": { "origin": "Royal Road" } },
-    { "id": "mother-of-learning", "tier": "s", "pos": 0, "title": "Mother of Learning", "byline": "nobody103",
+      "image": {
+        "src": "https://www.royalroadcdn.com/public/covers-full/beware-of-chicken-aacav1xoeg8.jpg"
+      },
+      "note": "Cultivation, but the farm is the point.",
+      "fields": {
+        "origin": "Royal Road"
+      }
+    },
+    {
+      "id": "mother-of-learning",
+      "tier": "s",
+      "pos": 0,
+      "title": "Mother of Learning",
+      "byline": "nobody103",
       "href": "https://www.royalroad.com/fiction/21220/mother-of-learning",
-      "image": { "src": "https://www.royalroadcdn.com/public/covers-full/21220-mother-of-learning.jpg?time=1637247458" },
-      "note": "Time loop, tightly plotted.", "fields": { "origin": "Royal Road" } },
-    { "id": "super-supportive", "tier": "s", "pos": 1, "title": "Super Supportive", "byline": "Sleyca",
+      "image": {
+        "src": "https://www.royalroadcdn.com/public/covers-full/21220-mother-of-learning.jpg"
+      },
+      "note": "Time loop, tightly plotted.",
+      "fields": {
+        "origin": "Royal Road"
+      }
+    },
+    {
+      "id": "super-supportive",
+      "tier": "s",
+      "pos": 1,
+      "title": "Super Supportive",
+      "byline": "Sleyca",
       "href": "https://www.royalroad.com/fiction/63759/super-supportive",
-      "image": { "src": "https://www.royalroadcdn.com/public/covers-large/63759-super-supportive.jpg?time=1691780497" },
-      "fields": { "origin": "Royal Road" } },
-    { "id": "defiance-of-the-fall", "tier": "a", "pos": 0, "title": "Defiance of the Fall", "byline": "TheFirstDefier",
+      "image": {
+        "src": "https://www.royalroadcdn.com/public/covers-full/63759-super-supportive.jpg"
+      },
+      "fields": {
+        "origin": "Royal Road"
+      }
+    },
+    {
+      "id": "defiance-of-the-fall",
+      "tier": "a",
+      "pos": 0,
+      "title": "Defiance of the Fall",
+      "byline": "TheFirstDefier",
       "href": "https://www.royalroad.com/fiction/24709/defiance-of-the-fall",
-      "image": { "src": "https://www.royalroadcdn.com/public/covers-large/24709-defiance-of-the-fall.jpg?time=1707310837" },
-      "fields": { "origin": "Royal Road" } },
-    { "id": "azarinth-healer", "tier": "a", "pos": 1, "title": "Azarinth Healer", "byline": "Rhaegar",
+      "image": {
+        "src": "https://www.royalroadcdn.com/public/covers-full/24709-defiance-of-the-fall.jpg"
+      },
+      "fields": {
+        "origin": "Royal Road"
+      }
+    },
+    {
+      "id": "azarinth-healer",
+      "tier": "a",
+      "pos": 1,
+      "title": "Azarinth Healer",
+      "byline": "Rhaegar",
       "href": "https://www.royalroad.com/fiction/16946/azarinth-healer",
-      "image": { "src": "https://www.royalroadcdn.com/public/covers-full/16946-azarinth-healer.jpg" },
-      "fields": { "origin": "Royal Road" } },
-    { "id": "he-who-fights", "tier": "b", "pos": 0, "title": "He Who Fights with Monsters", "byline": "Shirtaloon",
+      "image": {
+        "src": "https://www.royalroadcdn.com/public/covers-full/16946-azarinth-healer.jpg"
+      },
+      "fields": {
+        "origin": "Royal Road"
+      }
+    },
+    {
+      "id": "he-who-fights",
+      "tier": "b",
+      "pos": 0,
+      "title": "He Who Fights with Monsters",
+      "byline": "Shirtaloon",
       "href": "https://www.royalroad.com/fiction/26294/he-who-fights-with-monsters",
-      "image": { "src": "https://www.royalroadcdn.com/public/covers-full/26294-he-who-fights-with-monsters.jpg?time=1647798637" },
-      "fields": { "origin": "Royal Road" } },
-    { "id": "randidly-ghosthound", "tier": null, "pos": 0, "title": "The Legend of Randidly Ghosthound", "byline": "puddles4263",
+      "image": {
+        "src": "https://www.royalroadcdn.com/public/covers-full/26294-he-who-fights-with-monsters.jpg"
+      },
+      "fields": {
+        "origin": "Royal Road"
+      }
+    },
+    {
+      "id": "randidly-ghosthound",
+      "tier": null,
+      "pos": 0,
+      "title": "The Legend of Randidly Ghosthound",
+      "byline": "puddles4263",
       "href": "https://www.royalroad.com/fiction/11209/the-legend-of-randidly-ghosthound",
-      "image": { "src": "https://www.royalroadcdn.com/public/covers-full/11209-the-legend-of-randidly-ghosthound.jpg" } }
+      "image": {
+        "src": "https://www.royalroadcdn.com/public/covers-full/11209-the-legend-of-randidly-ghosthound.jpg"
+      }
+    }
   ],
-  "render": { "tooltip": "card", "target": "_blank", "rel": "noopener noreferrer", "showLabels": false, "fieldOrder": [] }
+  "render": {
+    "tooltip": "card",
+    "target": "_blank",
+    "rel": "noopener noreferrer",
+    "showLabels": false,
+    "fieldOrder": []
+  }
 }

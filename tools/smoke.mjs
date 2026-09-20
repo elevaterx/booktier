@@ -17,7 +17,7 @@ const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PAT
 // refused. Aborting the images instead makes the page retry them hard enough to starve the
 // input queue, which hangs page.mouse.move mid-drag — and it made the suite depend on Royal
 // Road being reachable, which a test suite should never do.
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 const STUB_PNG = readFileSync(new URL('fixtures/cover.png', import.meta.url));
 
 const blockExternal = async (target) => {
@@ -817,6 +817,19 @@ check('a cover outside the editor keeps the page scrollable on touch', touch.off
 const workflow = readFileSync(new URL('../.github/workflows/check.yml', import.meta.url), 'utf8');
 check('a workflow runs the generator check and the suite on every push',
   /npm run check/.test(workflow) && /tools\/smoke\.mjs/.test(workflow) && /on:\s*\n\s*push:/.test(workflow));
+
+// ---- the demo's own cover URLs ----
+// The landing page hotlinks these deliberately (see README). The part worth guarding is that
+// they stay as durable as a hotlink can be: https, no cache-buster query string to expire, and
+// nothing pointing at a host that is not a cover CDN.
+const exampleDoc = JSON.parse(readFileSync(new URL('../data/example.json', import.meta.url), 'utf8'));
+const demoCovers = exampleDoc.items.map((i) => (i.image && i.image.src) || '').filter(Boolean);
+check('every demo cover is served over https', demoCovers.every((u) => u.startsWith('https://')),
+  `${demoCovers.length} covers`);
+check('no demo cover carries a cache-buster that can expire',
+  demoCovers.every((u) => !u.includes('?')), demoCovers.find((u) => u.includes('?')) || '');
+check('the repo still ships no cover images of its own',
+  !existsSync(new URL('../demo/covers', import.meta.url)) && !demoCovers.some((u) => u.startsWith('data:')));
 
 // ---- the deployed header rules must actually do what they claim ----
 // Not browser-testable: Cloudflare composes these, and the suite serves its own headers. What is
