@@ -751,6 +751,23 @@ check('the reading view produces no CSP violations', cspViewViolations.length ==
 check('tier colors survive the strict CSP in the reading view', cspViewColor === 'rgb(255, 223, 127)', cspViewColor);
 await cspView.close();
 
+// ---- the deployed header rules must actually do what they claim ----
+// Not browser-testable: Cloudflare composes these, and the suite serves its own headers. What is
+// checkable is the shape, and the shape is where this went wrong — a relaxed policy on a specific
+// path is inert unless the inherited one is detached first.
+const headersFile = readFileSync(new URL('../_headers', import.meta.url), 'utf8');
+const listsBlock = headersFile.split(/^\/lists\/\*$/m)[1] || '';
+const rootBlock = (headersFile.split(/^\/\*$/m)[1] || '').split(/^\//m)[0];
+check('the exported-list rule detaches the inherited CSP before relaxing it',
+  /^\s*!\s+Content-Security-Policy\s*$/m.test(listsBlock) && /Content-Security-Policy:/.test(listsBlock));
+check('the exported-list rule does not repeat inherited headers',
+  !/Referrer-Policy|X-Content-Type-Options/.test(listsBlock));
+check('the root policy still forbids inline script and style',
+  /script-src 'self'/.test(rootBlock) && /style-src 'self'/.test(rootBlock)
+  && !/unsafe-inline/.test(rootBlock) && !/unsafe-eval/.test(rootBlock));
+check('the reading view is kept out of search indexes',
+  /^\/v\/\*$/m.test(headersFile) && /X-Robots-Tag: noindex/.test(headersFile));
+
 // ---- landing page ----
 const landing = await browser.newPage({ viewport: { width: 1280, height: 1100 } });
 landing.setDefaultTimeout(10000);

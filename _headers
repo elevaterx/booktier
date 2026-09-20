@@ -1,5 +1,10 @@
-# Cloudflare Pages / Netlify response headers.
+# Cloudflare Workers static assets / Netlify response headers.
 # The policy below is the one tools/smoke.mjs enforces against a live browser session.
+#
+# Rules COMBINE, they do not override: a request matching several rules inherits every rule's
+# headers, and a header set twice is joined with a comma. Two Content-Security-Policy values are
+# two policies, and a browser enforces both — the intersection, not the looser one. So a rule that
+# means to relax the policy for one path has to detach the inherited header first with `! `.
 
 /*
   Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' https: data: blob:; connect-src 'self' https:; font-src 'self'; frame-src 'self' blob:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
@@ -13,12 +18,16 @@
 # The reading view renders whatever list the visitor's own link carries. Nothing is stored here
 # and every list looks like the same URL to a crawler, but the links in it are user-submitted, so
 # the path is kept out of the index the same way any site treats user content.
+# It inherits the policy above, which it satisfies — only this one header is added.
 /v/*
   X-Robots-Tag: noindex
 
 # Exported lists are self-contained files and carry their styles inline by design, so they need
 # a looser style rule. Scripts stay forbidden — an exported page has none.
+# The `! ` line is load-bearing: without it the inherited style-src 'self' is enforced alongside
+# this policy and the page renders unstyled, which is the exact failure this block exists to
+# prevent. Referrer-Policy and X-Content-Type-Options are inherited and are not repeated, because
+# repeating them would join each value to itself.
 /lists/*
+  ! Content-Security-Policy
   Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; img-src 'self' https: data:; frame-ancestors 'none'
-  Referrer-Policy: no-referrer
-  X-Content-Type-Options: nosniff

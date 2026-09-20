@@ -56,8 +56,21 @@ site, give that path its own policy:
 
 ```
 /lists/*
+  ! Content-Security-Policy
   Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; img-src 'self' https: data:; frame-ancestors 'none'
 ```
+
+**The `! ` line is not optional.** Rules in a `_headers` file combine rather than override: a
+request matching both `/*` and `/lists/*` inherits both rules' headers, and a header set twice is
+joined with a comma. Two `Content-Security-Policy` values are two policies, and a browser enforces
+both — the intersection, not the looser one. Without the detach, the inherited `style-src 'self'`
+is still in force and the exported page renders unstyled, which is precisely what this block
+exists to prevent. Verified against Cloudflare's documentation, not assumed.
+
+`! ` is Cloudflare's syntax. Netlify's documentation does not say how it resolves two rules that
+set the same header, so if you host there, check the response in your browser's network tab before
+trusting this block — and if styles are blocked, move exported lists to their own site rather than
+guessing.
 
 `'self'` is in `img-src` because an exported list may point at covers you host yourself — the
 `covers/book.jpg` convention in the README — and without it those covers are blocked while remote
