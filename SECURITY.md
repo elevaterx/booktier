@@ -53,17 +53,15 @@ there is no third-party origin that can change what your visitors run.
 
 These are real and worth deciding about before you host a public copy.
 
-**1. `?data=` lets anyone render content on your domain.** Someone can send a link to
-`https://your-site/?data=https://their-host/list.json` and your domain will display their titles
-and their links. The content cannot execute code, but it can carry misleading text and links to
-anywhere — which is a defacement and phishing shape, wearing your domain name.
+**1. `?data=` is restricted to this site — check it before you widen it.** The shipped build
+loads `?data=` documents only from its own origin. Left open, anyone could send a link to
+`https://your-site/?data=https://their-host/list.json` and your domain would display their
+titles and their outbound links: no code execution, but a defacement and phishing shape wearing
+your domain name.
 
-Pick one before going public:
-
-- Leave it on, and accept that your domain can render other people's lists.
-- Restrict it to hosts you control — edit `dataParam()` in `src/io/loadUrl.js` to check the
-  hostname against an allowlist.
-- Remove it — delete the `dataParam()` call in `boot()`. Import from a file still works.
+Running your own copy and want to allow another host? Add it to `ALLOWED_DATA_HOSTS` in
+`src/io/loadUrl.js`. Keep it to hosts you control — a wildcard defeats the point. To remove the
+feature entirely, delete the `dataParam()` call in `boot()`; importing from a file still works.
 
 **2. Cover URLs cause the viewer's browser to make requests.** A document can list cover URLs on
 any https host, and viewing it will fetch them — which that host can log. Mitigated by

@@ -86,6 +86,7 @@ export function attachDnD(root, { onDrop }) {
 
   root.addEventListener('pointerdown', (e) => {
     if (e.button !== 0) return;
+    if (e.target.closest('[data-move]')) return;      // the nudge buttons are not drag handles
     const item = e.target.closest('.bt-item');
     if (!item || !root.contains(item)) return;
     state = { source: item, startX: e.clientX, startY: e.clientY, dragging: false, target: null };

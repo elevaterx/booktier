@@ -1,0 +1,13 @@
+{
+  // Deploy settings live in the repo so a build does not depend on dashboard state.
+  // booktier is a static site: no Worker script, no build step — the generated files are committed.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "booktier",
+  "compatibility_date": "2026-09-18",
+  "assets": {
+    "directory": "."
+  },
+  "observability": {
+    "enabled": true
+  }
+}

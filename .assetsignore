@@ -1,0 +1,17 @@
+# Files in this repo that must NOT be uploaded as public site assets.
+# Same syntax as .gitignore. Without this, `wrangler deploy` uploads node_modules — including
+# a 127 MB workerd binary that exceeds the 25 MiB per-asset limit and fails the build.
+
+node_modules
+.wrangler
+tools
+src/site/landing.template.html
+package.json
+package-lock.json
+bun.lock
+bun.lockb
+wrangler.jsonc
+.assetsignore
+.gitattributes
+.gitignore
+*.md

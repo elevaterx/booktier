@@ -13,7 +13,8 @@ URL layout:
 | wherever you put them | Exported lists. They are self-contained files; see the separate policy below. |
 
 Run `npm run check` before deploying: it fails if the generated landing page or stylesheets are
-stale relative to their sources.
+stale relative to their sources. There is no build step to configure on the host — leave the build
+command empty and the output directory at the repository root.
 
 The rest of this document is about serving it *well*: the response headers worth setting, the one
 policy that needs a second rule, and per-host recipes.
@@ -61,7 +62,21 @@ styles, and the page still cannot execute anything.
 
 ## Host recipes
 
-**Cloudflare Pages / Netlify** — create `_headers` in the web root:
+**Cloudflare (Workers static assets)** — this is what the dashboard sets up today when you
+connect a Git repository, and the repo ships the two files it needs:
+
+- `wrangler.jsonc` — names the project and points `assets.directory` at the repository root.
+- `.assetsignore` — keeps `node_modules`, `tools/` and the markdown docs out of the upload.
+  Without it the deploy tries to publish `node_modules` and fails: Cloudflare caps a single
+  asset at 25 MiB, and `node_modules/workerd/bin/workerd` is over 120 MB.
+
+Leave the build command empty. Cloudflare still runs `bun install` because a `package.json`
+exists — that only pulls the Playwright devDependency used by the test suite and is harmless.
+
+`_headers` (below) is honored on this path as well as on Pages.
+
+**Cloudflare Pages / Netlify** — `_headers` ships in this repository already, so a connected
+deploy picks it up with no configuration. It contains:
 
 ```
 /*
@@ -74,6 +89,27 @@ styles, and the page still cannot execute anything.
 **GitHub Pages** — cannot set response headers at all. The `<meta>` policy in `index.html` is
 your CSP there, which covers everything except `frame-ancestors`. Acceptable for a personal copy;
 use a host with header control if you care about framing.
+
+**Apache / cPanel shared hosting (GoDaddy, Bluehost, and similar)** — upload the files to the
+document root and put this in `.htaccess` beside them:
+
+```apache
+<IfModule mod_headers.c>
+  Header always set Content-Security-Policy "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' https: data: blob:; connect-src 'self' https:; font-src 'self'; frame-src 'self' blob:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+  Header always set Referrer-Policy "no-referrer"
+  Header always set X-Content-Type-Options "nosniff"
+
+  # Exported lists carry their styles inline by design — give them their own policy.
+  <FilesMatch "^lists/">
+    Header always set Content-Security-Policy "default-src 'none'; style-src 'unsafe-inline'; img-src https: data:; frame-ancestors 'none'"
+  </FilesMatch>
+</IfModule>
+```
+
+Shared hosting works, but note what you give up: uploads are manual (FTP or the host's file
+manager) on every change, there is no deploy from the repo, and `mod_headers` has to be enabled —
+on some plans it is not, and the policy silently does nothing. Check for the headers with your
+browser's network tab after the first upload rather than assuming they applied.
 
 **nginx**
 

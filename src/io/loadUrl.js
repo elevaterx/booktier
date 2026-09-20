@@ -11,6 +11,23 @@ import { migrate, validate } from '../core/schema.js';
 const MAX_BYTES = 2 * 1024 * 1024;
 const TIMEOUT_MS = 15000;
 
+/**
+ * Hosts a ?data= document may be loaded from. Empty array = this site only.
+ *
+ * Why this is restricted: the address bar shows YOUR domain while the content comes from the
+ * URL in the link. Left open, anyone can send a link that renders their titles, their notes and
+ * their outbound links at your address. Nothing executes — everything is escaped and links are
+ * scheme-checked — but the page still wears your domain name.
+ *
+ * Running your own copy? Add your own hosts here. Keep it to hosts you control; a wildcard
+ * defeats the point.
+ */
+export const ALLOWED_DATA_HOSTS = [];
+
+/**
+ * Returns the URL to load, `null` when there is no usable ?data= parameter, or
+ * `{blocked: hostname}` when a link pointed somewhere this site will not load from.
+ */
 export function dataParam(search = window.location.search) {
   const raw = new URLSearchParams(search).get('data');
   if (!raw) return null;
@@ -19,6 +36,8 @@ export function dataParam(search = window.location.search) {
     const localDev = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
     if (url.protocol !== 'https:' && !(url.protocol === 'http:' && localDev)) return null;
     if (url.username || url.password) return null;      // no credentials smuggled in the URL
+    const sameOrigin = url.origin === window.location.origin;
+    if (!sameOrigin && !ALLOWED_DATA_HOSTS.includes(url.hostname)) return { blocked: url.hostname };
     return url.href;
   } catch { return null; }
 }

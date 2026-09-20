@@ -22,6 +22,14 @@ button.danger{color:#ff8080;border-color:#5a2a2a}
 .hint{color:var(--bt-muted);font-size:13px;margin:4px 0 16px}
 kbd{font:600 11px/1 ui-monospace,monospace;border:1px solid var(--bt-line);border-bottom-width:2px;border-radius:4px;padding:2px 4px}
 .board-host .bt-item{cursor:grab}
+
+/* Tier nudge buttons — shown on hover/focus with a mouse, always shown on touch. */
+.bt-moves{position:absolute;top:3px;right:3px;display:flex;flex-direction:column;gap:2px;opacity:0;transition:opacity .12s ease}
+.bt-item:hover .bt-moves,.bt-item:focus-within .bt-moves,.bt-item:focus-visible .bt-moves{opacity:1}
+.bt-move{width:22px;height:20px;padding:0;font-size:10px;line-height:1;border-radius:5px;border:1px solid rgba(0,0,0,.35);background:rgba(18,20,26,.82);color:#e8eaed;cursor:pointer;backdrop-filter:blur(2px)}
+.bt-move:hover{background:#2b5cd7;border-color:#2b5cd7}
+.bt-move:active{transform:translateY(1px)}
+@media (hover:none){.bt-moves{opacity:1}.bt-move{width:26px;height:24px;font-size:12px}}
 .footline{display:flex;gap:16px;margin-top:14px;font-size:13px;color:var(--bt-muted)}
 #status.error{color:#ff9f9f}
 .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}

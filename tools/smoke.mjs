@@ -145,7 +145,7 @@ const cspReady = await page.evaluate(() => ({
   styleAttrs: [...document.querySelectorAll('*')].filter((el) => el.hasAttribute('style')).length,
   inlineScripts: [...document.querySelectorAll('script')].filter((el) => !el.src && el.textContent.trim()).length,
   boardCssLinked: !!document.querySelector('link[href$="board.css"]'),
-  externalOrigins: [...document.querySelectorAll('script[src],link[href],img[src]')]
+  externalOrigins: [...document.querySelectorAll('script[src],link[rel~="stylesheet"][href],link[rel~="icon"][href],img[src]')]
     .map((el) => el.src || el.href).filter((u) => u && !u.startsWith(location.origin) && !u.startsWith('data:') && !u.startsWith('blob:')),
 }));
 check('no inline event handlers in the editor', cspReady.inlineHandlers === 0);
@@ -249,6 +249,36 @@ check('preview renders linked covers under strict CSP', previewRendered.anchors 
 check('preview is styled under strict CSP', previewRendered.labelBg && previewRendered.labelBg !== 'rgba(0, 0, 0, 0)' && previewRendered.cardWidth === '230px', `label ${previewRendered.labelBg}, card ${previewRendered.cardWidth}`);
 check('preview hover card starts hidden', previewRendered.cardHidden === 'hidden', String(previewRendered.cardHidden));
 
+// ---- tier nudge buttons (editor only) ----
+const moveBtn = page.locator('.bt-item[data-id="mother-of-learning"] [data-move="up"]');
+const tierBefore = await page.evaluate(() => document.querySelector('.bt-items[data-tier="s"] .bt-item[data-id="mother-of-learning"]') ? 's' : 'other');
+await moveBtn.click({ force: true });          // force: the control only becomes visible on hover
+await page.waitForTimeout(150);
+const tierAfter = await page.evaluate(() => !!document.querySelector('.bt-items[data-tier="splus"] .bt-item[data-id="mother-of-learning"]'));
+check('nudge button moves an item up a tier', tierBefore === 's' && tierAfter, `${tierBefore} -> ${tierAfter ? 'splus' : 'unchanged'}`);
+const dialogOpen = await page.evaluate(() => !!document.querySelector('#itemdialog[open]'));
+check('nudge button does not open the item editor', dialogOpen === false);
+const moveLabels = await page.evaluate(() => {
+  const b = document.querySelector('.bt-item [data-move="down"]');
+  return { label: b?.getAttribute('aria-label'), tabindex: b?.getAttribute('tabindex') };
+});
+check('nudge buttons are labeled and out of the tab order', /Move .+ down a tier/.test(moveLabels.label || '') && moveLabels.tabindex === '-1', JSON.stringify(moveLabels));
+check('nudge buttons never reach the exported page', !hostile.html.includes('data-move'));
+
+// ---- ?data= is restricted to this site ----
+const dataPolicy = await page.evaluate(async () => {
+  const m = await import('../src/io/loadUrl.js');
+  const mk = (u) => `?data=${encodeURIComponent(u)}`;
+  return {
+    sameOrigin: m.dataParam(mk(`${location.origin}/data/example.json`)),
+    foreign: m.dataParam(mk('https://evil.example/list.json')),
+    allowlist: m.ALLOWED_DATA_HOSTS,
+  };
+});
+check('a list on this site still loads', typeof dataPolicy.sameOrigin === 'string' && dataPolicy.sameOrigin.includes('/data/example.json'));
+check('a list on someone else\'s host is refused', !!(dataPolicy.foreign && dataPolicy.foreign.blocked === 'evil.example'), JSON.stringify(dataPolicy.foreign));
+check('the allowlist ships empty', Array.isArray(dataPolicy.allowlist) && dataPolicy.allowlist.length === 0);
+
 // ---- landing page ----
 const landing = await browser.newPage({ viewport: { width: 1280, height: 1100 } });
 const landingErrors = [];
@@ -268,7 +298,9 @@ const home = await landing.evaluate(() => ({
   scripts: document.querySelectorAll('script').length,
   hasCsp: !!document.querySelector('meta[http-equiv="Content-Security-Policy"]'),
   hasDescription: !!document.querySelector('meta[name="description"]'),
-  externals: [...document.querySelectorAll('link[href],script[src],img[src]')].map((el) => el.href || el.src)
+  // only things the browser actually LOADS — rel=canonical/og:url are metadata, not requests
+  externals: [...document.querySelectorAll('link[rel~="stylesheet"][href],link[rel~="icon"][href],script[src],img[src]')]
+    .map((el) => el.href || el.src)
     .filter((u) => u && !u.startsWith(location.origin) && !u.startsWith('data:')),
   unreplacedTokens: /__(DEMO|REPO)__/.test(document.documentElement.outerHTML),
 }));

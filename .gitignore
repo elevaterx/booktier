@@ -3,3 +3,5 @@ covers/*
 !covers/.gitkeep
 *.local.json
 .DS_Store
+.wrangler/
+bun.lock

@@ -44,9 +44,12 @@ function hueClass(seed) {
 export function itemHtml(item, render, opts = {}) {
   const label = [item.title, item.byline].filter(Boolean).join(' — ');
   const native = render.tooltip === 'native' ? ` title="${escapeHtml(label)}"` : '';
+  // A cover-less item shows its title on the placeholder — unless captions are on, in which
+  // case printing it twice is just noise.
+  const blankText = render.showLabels ? '' : `<span class="bt-blank-title">${escapeHtml(item.title || '?')}</span>`;
   const img = item.image
     ? `<img class="bt-cover" src="${escapeHtml(item.image.src)}" alt="${escapeHtml(label)}" loading="lazy" decoding="async">`
-    : `<span class="bt-cover bt-cover-blank ${hueClass(item.id || item.title)}" aria-hidden="true"><span class="bt-blank-title">${escapeHtml(item.title || '?')}</span></span>`;
+    : `<span class="bt-cover bt-cover-blank ${hueClass(item.id || item.title)}" aria-hidden="true">${blankText}</span>`;
   const caption = render.showLabels ? `<span class="bt-label">${escapeHtml(item.title)}</span>` : '';
   const inner = `${img}${caption}${cardHtml(item, render)}`;
   const attrs = `class="bt-item" data-id="${escapeHtml(item.id)}"${native}`;
@@ -58,7 +61,16 @@ export function itemHtml(item, render, opts = {}) {
   }
   if (opts.editable) {
     const href = item.href ? ` data-href="${escapeHtml(item.href)}"` : '';
-    return `<span ${attrs}${href} tabindex="0" role="button" draggable="false" aria-label="${escapeHtml(label)}">${inner}</span>`;
+    // Tier nudge buttons: drag is awkward on a phone and Ctrl+arrows do not exist there.
+    // tabindex=-1 keeps them out of the tab order — three stops per cover would make keyboard
+    // navigation of a long list miserable, and Ctrl+arrows already cover that case.
+    const moves = [
+      '<span class="bt-moves" aria-hidden="false">',
+      `<button type="button" class="bt-move" data-move="up" tabindex="-1" aria-label="Move ${escapeHtml(item.title)} up a tier">▲</button>`,
+      `<button type="button" class="bt-move" data-move="down" tabindex="-1" aria-label="Move ${escapeHtml(item.title)} down a tier">▼</button>`,
+      '</span>',
+    ].join('');
+    return `<span ${attrs}${href} tabindex="0" role="button" draggable="false" aria-label="${escapeHtml(label)}">${inner}${moves}</span>`;
   }
   return `<span ${attrs} tabindex="0">${inner}</span>`;
 }
@@ -127,7 +139,7 @@ export const BOARD_CSS = `
 // The source document is embedded so the exported file can be re-imported into the editor.
 export function pageHtml(doc, opts = {}) {
   const credit = opts.credit === false ? '' :
-    '<footer class="bt-foot">Made with <a href="https://github.com/elevaterx/booktier">booktier</a></footer>';
+    '<footer class="bt-foot">Made with <a href="https://booktier.org">booktier</a></footer>';
   return `<!doctype html>
 <html lang="en">
 <meta charset="utf-8">

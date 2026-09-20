@@ -2,6 +2,8 @@
 
 Tier lists for books, where every cover is a link.
 
+**[booktier.org](https://booktier.org)** — hosted, free, no account.
+
 Open-source tier list makers treat a PNG as the finished product. That works until someone asks
 "what's that one in S tier?" — a picture can't answer, and it can't be clicked. booktier's
 output is a web page: each cover is an anchor to wherever the book lives (Amazon, Royal Road,
@@ -23,8 +25,9 @@ per-item link or hover metadata at all.
 
 ## What it does
 
-- Drag covers between tiers, or move them from the keyboard — focus a cover, then
-  `Ctrl`+`↑`/`↓` to change tier and `Ctrl`+`←`/`→` to reorder.
+- Drag covers between tiers, tap the ▲▼ buttons on a cover, or move them from the keyboard —
+  focus a cover, then `Ctrl`+`↑`/`↓` to change tier and `Ctrl`+`←`/`→` to reorder. The buttons
+  are always visible on touch devices, where dragging is fiddly and shortcuts don't exist.
 - Give each book a title, author, link, cover image, a note, and arbitrary extra fields
   (`hours: 84`, `volumes: 12`) that show in the hover card.
 - Save covers once into a local store, then render from the saved copies. Fetch a cover a second
@@ -56,8 +59,9 @@ documents, and a pass with the production Content-Security-Policy applied.
 Add books one per line as `Title | Author | link | cover image URL`, drag them into tiers, and
 click **Export page**.
 
-To publish a list whose data lives in a separate file, host the JSON anywhere and open the
-editor with `?data=https://example.com/my-list.json`.
+To publish a list whose data lives in a separate file, put the JSON on the same site as the
+editor and open it with `?data=https://your-site/lists/my-list.json`. Documents from other hosts
+are refused by default — `SECURITY.md` explains why and how to allow a host you control.
 
 ## Covers
 

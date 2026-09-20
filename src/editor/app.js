@@ -220,6 +220,12 @@ function bind() {
   attachDnD($('#board'), { onDrop: move });
 
   $('#board').addEventListener('click', (e) => {
+    const move = e.target.closest('[data-move]');
+    if (move) {
+      e.stopPropagation();
+      keyboardMove(move.closest('.bt-item').dataset.id, move.dataset.move === 'up' ? -1 : 1, 'tier');
+      return;
+    }
     const item = e.target.closest('.bt-item');
     if (item) openItem(item.dataset.id);
   });
@@ -320,9 +326,11 @@ function bind() {
 }
 
 async function boot() {
-  const url = dataParam();
-  if (url) {
-    try { doc = await loadFromUrl(url); status('Loaded a tier list from the ?data= link. Treat its contents as untrusted.'); }
+  const param = dataParam();
+  if (param && param.blocked) {
+    status(`This copy of booktier only opens lists hosted on its own site, so it did not load one from ${param.blocked}.`, true);
+  } else if (param) {
+    try { doc = await loadFromUrl(param); status('Loaded a tier list from the ?data= link.'); }
     catch (err) { status(`Could not load ?data= list: ${err.message}`, true); }
   }
   if (!doc) {
