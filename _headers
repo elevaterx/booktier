@@ -22,12 +22,14 @@
 /v/*
   X-Robots-Tag: noindex
 
-# Exported lists are self-contained files and carry their styles inline by design, so they need
+# Exported lists are unlisted, so search engines are asked not to index them.
+# They are self-contained files and carry their styles inline by design, so they need
 # a looser style rule. Scripts stay forbidden — an exported page has none.
 # The `! ` line is load-bearing: without it the inherited style-src 'self' is enforced alongside
 # this policy and the page renders unstyled, which is the exact failure this block exists to
 # prevent. Referrer-Policy and X-Content-Type-Options are inherited and are not repeated, because
 # repeating them would join each value to itself.
 /lists/*
+  X-Robots-Tag: noindex
   ! Content-Security-Policy
   Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; img-src 'self' https: data:; frame-ancestors 'none'

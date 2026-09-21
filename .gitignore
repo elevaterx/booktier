@@ -5,3 +5,4 @@ covers/*
 .DS_Store
 .wrangler/
 bun.lock
+Claude outputs/
