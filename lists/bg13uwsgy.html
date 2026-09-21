@@ -21,7 +21,7 @@ body{margin:0;padding:24px 16px 40px;background:var(--bt-bg);color:var(--bt-fg);
 .bt-items{flex:1;display:flex;flex-wrap:wrap;gap:6px;padding:8px;min-height:calc(var(--bt-cover-w)*1.5 + 8px)}
 .bt-item{position:relative;display:block;width:var(--bt-cover-w);text-decoration:none;color:inherit;border-radius:6px;outline-offset:3px}
 .bt-item:focus-visible{outline:2px solid #6ea8fe}
-.bt-shell{position:relative;display:flex;align-items:center;justify-content:center;width:var(--bt-cover-w);height:calc(var(--bt-cover-w)*1.5);padding:8px;text-align:center;border-radius:6px;overflow:hidden;background:linear-gradient(145deg,#3b4254,#232838)}
+.bt-shell{box-sizing:border-box;position:relative;display:flex;align-items:center;justify-content:center;width:var(--bt-cover-w);height:calc(var(--bt-cover-w)*1.5);padding:8px;text-align:center;border-radius:6px;overflow:hidden;background:linear-gradient(145deg,#3b4254,#232838)}
 /* transparent, not a grey plate: a cover that fails to load must reveal the title beneath it */
 .bt-cover{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:cover;background:transparent}
 .bt-blank-title{font-size:11px;line-height:1.25;font-weight:600;color:#e8eaed;overflow:hidden;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical}
