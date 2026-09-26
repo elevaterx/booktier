@@ -153,9 +153,21 @@ export const BOARD_CSS = `
 
 // A standalone page: no scripts, no network dependencies beyond the cover images themselves.
 // The source document is embedded so the exported file can be re-imported into the editor.
+// opts.links: extra footer links from whoever publishes the page ("Open in the editor",
+// "Download JSON"). Plain anchors, so the page stays script-free. They come from the caller, not
+// the document, but are still escaped and limited to http(s) and relative paths, so a caller
+// passing untrusted input through cannot produce a javascript: link.
+function footLink(link) {
+  const href = String(link?.href || '').trim();
+  if (!href || (/^[a-z][a-z0-9+.-]*:/i.test(href) && !/^https?:/i.test(href))) return '';
+  const download = link.download ? ` download="${escapeHtml(link.download)}"` : '';
+  return `<a href="${escapeHtml(href)}"${download}>${escapeHtml(link.label || href)}</a>`;
+}
+
 export function pageHtml(doc, opts = {}) {
-  const credit = opts.credit === false ? '' :
-    '<footer class="bt-foot">Made with <a href="https://booktier.org">booktier</a></footer>';
+  const parts = (opts.links || []).map(footLink).filter(Boolean);
+  if (opts.credit !== false) parts.push('Made with <a href="https://booktier.org">booktier</a>');
+  const credit = parts.length ? `<footer class="bt-foot">${parts.join(' · ')}</footer>` : '';
   return `<!doctype html>
 <html lang="en">
 <meta charset="utf-8">
