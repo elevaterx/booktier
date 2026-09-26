@@ -20,6 +20,7 @@ button.danger{color:#ff8080;border-color:#5a2a2a}
 .sub-input{flex:1 1 240px;color:var(--bt-muted)}
 .title-input:hover,.sub-input:hover,.title-input:focus,.sub-input:focus{border-color:var(--bt-line);outline:none}
 .check{color:var(--bt-muted);font-size:13px;display:flex;gap:6px;align-items:center}
+.check select{font:inherit;color:var(--bt-fg);background:var(--bt-card);border:1px solid var(--bt-line);border-radius:6px;padding:2px 4px}
 .hint{color:var(--bt-muted);font-size:13px;margin:4px 0 16px}
 kbd{font:600 11px/1 ui-monospace,monospace;border:1px solid var(--bt-line);border-bottom-width:2px;border-radius:4px;padding:2px 4px}
 .board-host .bt-item{cursor:grab}

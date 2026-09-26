@@ -5,7 +5,7 @@
 // off a canvas is exactly what browsers refuse, so an exporter that reached for the network
 // would fail at the moment of saving. Anything not in the store becomes a labeled placeholder.
 
-import { groupByTier, POOL, numbering } from '../core/group.js';
+import { groupByTier, POOL, numbering, badgeText } from '../core/group.js';
 import { bitmapFor } from '../io/covers.js';
 
 const THEME = {
@@ -128,6 +128,28 @@ function drawPlaceholder(ctx, item, x, y, w, h, radius, scale, titled = true) {
   for (const line of lines) { ctx.fillText(line, x + w / 2, ty); ty += lineHeight; }
 }
 
+// The list's corner label (render.badgeField), bottom-right so it never collides with the Reddit
+// number top-left. Same plate as that number, so the two read as one family.
+function drawCorner(ctx, text, x, y, w, h, scale) {
+  if (!text) return;
+  const ph = 17 * scale;
+  ctx.font = `700 ${11 * scale}px system-ui, sans-serif`;
+  const pw = Math.max(ph, ctx.measureText(text).width + 10 * scale);
+  const px = x + w - 3 * scale - pw, py = y + h - 3 * scale - ph;
+  ctx.save();
+  ctx.fillStyle = 'rgba(8,10,14,.82)';
+  roundRect(ctx, px, py, pw, ph, 5 * scale);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,.28)';
+  ctx.lineWidth = Math.max(1, scale * 0.5);
+  ctx.stroke();
+  ctx.fillStyle = '#f2f4f8';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, px + pw / 2, py + ph / 2 + scale * 0.5);
+  ctx.restore();
+}
+
 // The number a reader uses to get from a cover in the image to its link in the comment below it.
 // Drawn over the corner of the cover, on a plate dark enough to stay legible on any artwork.
 function drawBadge(ctx, value, x, y, scale) {
@@ -246,6 +268,7 @@ export async function toPng(doc, { scale = 2, credit = true, labels, numbers = f
       if (bitmap) drawCover(ctx, bitmap, ix, iy, S.coverW, S.coverH, S.radius * 0.6);
       else drawPlaceholder(ctx, item, ix, iy, S.coverW, S.coverH, S.radius * 0.6, scale, !showLabels);
       if (numberOf) drawBadge(ctx, numberOf.get(item.id), ix, iy, scale);
+      drawCorner(ctx, badgeText(item, doc.render), ix, iy, S.coverW, S.coverH, scale);
       if (showLabels) {
         ctx.fillStyle = THEME.text;
         ctx.font = `${S.captionSize}px system-ui, sans-serif`;

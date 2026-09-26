@@ -17,6 +17,9 @@ export const DEFAULT_RENDER = {
   rel: 'noopener noreferrer',
   showLabels: false,
   fieldOrder: [],         // which `fields` keys to show in the hover card, in order
+  badgeField: '',         // a `fields` key whose value is printed in the corner of every cover
+                          // (page, editor, image) and after the title in the Reddit post.
+                          // Empty = no corner label.
   caption: '',            // printed at the foot of the exported image — the user's own URL or
                           // handle, so the picture points somewhere once it is reposted.
                           // Empty by default: nobody should leak an address they did not choose.
@@ -82,8 +85,10 @@ export function normalizeRender(raw) {
     showLabels: !!partial.showLabels,
     fieldOrder: Array.isArray(partial.fieldOrder) ? partial.fieldOrder.filter((k) => typeof k === 'string') : [],
     caption: typeof partial.caption === 'string' ? partial.caption : '',
+    badgeField: typeof partial.badgeField === 'string' ? partial.badgeField.trim().slice(0, 40) : '',
   };
 }
+
 
 function normalizeTier(t, i) {
   return {

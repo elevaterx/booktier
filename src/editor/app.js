@@ -56,9 +56,31 @@ function offerRestore(prefix) {
   status(`${prefix} Your previous list was kept — press “Restore my previous list” to bring it back.`);
 }
 
+// The corner-label picker offers every `fields` key the list's books carry, rebuilt on each render
+// so an import or a newly added field shows up. The current choice is kept even if no book has it
+// any more, rather than silently switching the label off.
+function syncBadgeOptions() {
+  const select = $('#badge');
+  const current = doc.render.badgeField || '';
+  const keys = new Set(current ? [current] : []);
+  for (const item of doc.items) for (const key of Object.keys(item.fields || {})) keys.add(key);
+  const wanted = ['', ...[...keys].sort((a, b) => a.localeCompare(b))];
+  const have = [...select.options].map((o) => o.value);
+  if (wanted.join('\u0000') !== have.join('\u0000')) {
+    select.replaceChildren(...wanted.map((key) => {
+      const option = document.createElement('option');
+      option.value = key;
+      option.textContent = key || 'None';
+      return option;
+    }));
+  }
+  select.value = current;
+}
+
 function render() {
   $('#title').value = doc.title;
   $('#subtitle').value = doc.subtitle;
+  syncBadgeOptions();
   // inlineStyles:false keeps the editor free of style attributes so it can be served under a
   // Content-Security-Policy that forbids inline styles. Colors are applied through the CSSOM.
   $('#board').innerHTML = boardHtml(doc, { editable: true, inlineStyles: false });
@@ -333,6 +355,7 @@ function bind() {
   $('#title').addEventListener('input', (e) => { doc.title = e.target.value; persist(); });
   $('#subtitle').addEventListener('input', (e) => { doc.subtitle = e.target.value; persist(); });
   $('#labels').addEventListener('change', (e) => { doc.render.showLabels = e.target.checked; render(); });
+  $('#badge').addEventListener('change', (e) => { doc.render.badgeField = e.target.value; render(); });
   $('#caption').addEventListener('input', (e) => { doc.render.caption = e.target.value; persist(); });
 
   $('#btn-export').addEventListener('click', () => $('#exportdialog').showModal());

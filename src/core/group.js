@@ -64,3 +64,15 @@ export function numbering(doc) {
   }
   return out;
 }
+
+// The corner label for one item: the value of its render.badgeField field, as short text, or ''
+// when the list has no corner label or this item has no such field. Clipped so a long value
+// cannot cover the artwork; every caller still escapes it.
+export function badgeText(item, render) {
+  const key = render && render.badgeField;
+  if (!key || !item || !item.fields) return '';
+  const value = item.fields[key];
+  if (value === undefined || value === null || value === '') return '';
+  const text = String(value).trim();
+  return text.length > 8 ? `${text.slice(0, 7)}…` : text;
+}

@@ -21,6 +21,7 @@
 .bt-shell.bt-h5{background:linear-gradient(145deg,#5a3b34,#2e1e1a)}
 .bt-shell.bt-h6{background:linear-gradient(145deg,#37456a,#1d2338)}
 .bt-shell.bt-h7{background:linear-gradient(145deg,#3f5230,#212b19)}
+.bt-badge{position:absolute;right:4px;bottom:4px;min-width:18px;padding:1px 5px;box-sizing:border-box;border-radius:5px;background:rgba(8,10,14,.82);border:1px solid rgba(255,255,255,.28);color:#f2f4f8;font-size:11px;font-weight:700;line-height:15px;text-align:center;pointer-events:none}
 .bt-label{display:block;font-size:11px;line-height:1.25;margin-top:4px;color:var(--bt-fg);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .bt-card{position:absolute;left:50%;bottom:calc(100% + 8px);transform:translateX(-50%) translateY(4px);width:230px;padding:10px 12px;background:var(--bt-card);color:var(--bt-fg);border:1px solid var(--bt-line);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.35);opacity:0;visibility:hidden;transition:opacity .12s ease,transform .12s ease;z-index:20;pointer-events:none;display:flex;flex-direction:column;gap:3px;text-align:left}
 .bt-item:hover .bt-card,.bt-item:focus-visible .bt-card{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0)}
