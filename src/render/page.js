@@ -1,7 +1,7 @@
 // The renderer. The editor board and the exported page come from the same functions here,
 // so what you drag is what you publish.
 
-import { groupByTier, POOL } from '../core/group.js';
+import { groupByTier, POOL, badgeText } from '../core/group.js';
 
 export function escapeHtml(value) {
   return String(value == null ? '' : value)
@@ -62,7 +62,12 @@ export function itemHtml(item, render, opts = {}) {
   const img = item.image
     ? `<img class="bt-cover" src="${escapeHtml(item.image.src)}" alt="" loading="lazy" decoding="async" draggable="false">`
     : '';
-  const cover = `<span class="bt-shell ${hueClass(item.id || item.title)}" role="img" aria-label="${escapeHtml(label)}">${blankText}${img}</span>`;
+  // The corner label rides on the cover, after the image so it paints above the artwork, and is
+  // folded into the accessible name so a screen reader hears it too.
+  const badge = badgeText(item, render);
+  const corner = badge ? `<span class="bt-badge" aria-hidden="true">${escapeHtml(badge)}</span>` : '';
+  const named = badge ? `${label} (${render.badgeField}: ${badge})` : label;
+  const cover = `<span class="bt-shell ${hueClass(item.id || item.title)}" role="img" aria-label="${escapeHtml(named)}">${blankText}${img}${corner}</span>`;
   const caption = render.showLabels ? `<span class="bt-label">${escapeHtml(item.title)}</span>` : '';
   const card = cardHtml(item, render, opts);
   const inner = `${cover}${caption}${card}`;
@@ -139,6 +144,7 @@ export const BOARD_CSS = `
 .bt-shell.bt-h5{background:linear-gradient(145deg,#5a3b34,#2e1e1a)}
 .bt-shell.bt-h6{background:linear-gradient(145deg,#37456a,#1d2338)}
 .bt-shell.bt-h7{background:linear-gradient(145deg,#3f5230,#212b19)}
+.bt-badge{position:absolute;right:4px;bottom:4px;min-width:18px;padding:1px 5px;box-sizing:border-box;border-radius:5px;background:rgba(8,10,14,.82);border:1px solid rgba(255,255,255,.28);color:#f2f4f8;font-size:11px;font-weight:700;line-height:15px;text-align:center;pointer-events:none}
 .bt-label{display:block;font-size:11px;line-height:1.25;margin-top:4px;color:var(--bt-fg);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .bt-card{position:absolute;left:50%;bottom:calc(100% + 8px);transform:translateX(-50%) translateY(4px);width:230px;padding:10px 12px;background:var(--bt-card);color:var(--bt-fg);border:1px solid var(--bt-line);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.35);opacity:0;visibility:hidden;transition:opacity .12s ease,transform .12s ease;z-index:20;pointer-events:none;display:flex;flex-direction:column;gap:3px;text-align:left}
 .bt-item:hover .bt-card,.bt-item:focus-visible .bt-card{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0)}

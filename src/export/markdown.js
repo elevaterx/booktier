@@ -7,7 +7,7 @@
 // Per-tier lines rather than a table: a 59-row table is unreadable on Reddit's mobile app,
 // where most of the audience is.
 
-import { groupByTier, POOL, numbering } from '../core/group.js';
+import { groupByTier, POOL, numbering, badgeText } from '../core/group.js';
 
 // Only what actually breaks Reddit's syntax in running text. Escaping the full markdown
 // character set turns "S+" into "S\\+" and every sentence into a thicket of backslashes —
@@ -23,11 +23,15 @@ function safeUrl(href) {
   return String(href || '').replace(/\(/g, '%28').replace(/\)/g, '%29');
 }
 
-function itemMarkdown(item, number) {
+function itemMarkdown(item, number, render) {
   const title = escapeText(item.title);
   const linked = item.href ? `[${title}](${safeUrl(item.href)})` : title;
+  // The corner label the image prints on the cover, spelled out, since a bare number in a list
+  // of titles means nothing without the key.
+  const badge = badgeText(item, render);
+  const tagged = badge ? `${linked} (${escapeText(render.badgeField)} ${escapeText(badge)})` : linked;
   // The number is outside the link text so it reads as an index, not part of the book's name.
-  return number ? `${number}. ${linked}` : linked;
+  return number ? `${number}. ${tagged}` : tagged;
 }
 
 /**
@@ -58,14 +62,14 @@ export function toMarkdown(doc, opts = {}) {
     const label = escapeText(tier.label);
     const count = showCounts ? ` (${items.length})` : '';
     const listed = items
-      .map((i) => (byline && i.byline ? `${itemMarkdown(i, num(i))} — ${escapeText(i.byline)}` : itemMarkdown(i, num(i))))
+      .map((i) => (byline && i.byline ? `${itemMarkdown(i, num(i), doc.render)} — ${escapeText(i.byline)}` : itemMarkdown(i, num(i), doc.render)))
       .join(', ');
     lines.push(`**${label}**${count} — ${listed}`, '');
   }
 
   const unranked = groups.get(POOL) || [];
   if (unranked.length) {
-    lines.push(`*Unranked (${unranked.length})* — ${unranked.map((i) => itemMarkdown(i, num(i))).join(', ')}`, '');
+    lines.push(`*Unranked (${unranked.length})* — ${unranked.map((i) => itemMarkdown(i, num(i), doc.render)).join(', ')}`, '');
   }
 
   if (numberOf) lines.push('*Numbers match the covers in the image.*', '');

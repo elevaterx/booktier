@@ -555,6 +555,76 @@ const numberedPng = await page.evaluate(async () => {
 });
 check('numbering and labels change what the image renders', numberedPng.badged !== numberedPng.plain && numberedPng.taller,
   `${numberedPng.plain}b vs ${numberedPng.badged}b`);
+
+// ---- the corner label: one field printed on every cover, in every output ----
+const corner = await page.evaluate(async () => {
+  const schema = await import('../src/core/schema.js');
+  const { pageHtml } = await import('../src/render/page.js');
+  const { toPng } = await import('../src/export/png.js');
+  const { toMarkdown } = await import('../src/export/markdown.js');
+  const items = [
+    { id: 'c1', title: 'Twelve', tier: 'a', pos: 0, fields: { volumes: 12 } },
+    { id: 'c2', title: 'Unlabelled', tier: 'a', pos: 1 },
+    { id: 'c3', title: 'Hostile', tier: 'a', pos: 2, fields: { volumes: '<b>x</b>' } },
+    { id: 'c4', title: 'Long', tier: 'a', pos: 3, fields: { volumes: '1234567890' } },
+  ];
+  const on = schema.createDoc({ title: 'Corner', items, render: { badgeField: 'volumes' } });
+  const off = schema.createDoc({ title: 'Corner', items });
+  const html = pageHtml(on);
+  const pngOn = await toPng(on, { scale: 1 });
+  const pngOff = await toPng(off, { scale: 1 });
+  return {
+    html,
+    badges: (html.match(/class="bt-badge"/g) || []).length,
+    offBadges: (pageHtml(off).match(/class="bt-badge"/g) || []).length,
+    md: toMarkdown(on),
+    kept: schema.migrate(JSON.parse(JSON.stringify(on))).render.badgeField,
+    junk: schema.normalizeRender({ badgeField: 42 }).badgeField,
+    pngDiffers: pngOn.blob.size !== pngOff.blob.size,
+    sameHeight: pngOn.height === pngOff.height,
+  };
+});
+check('the corner label prints the chosen field on the cover', corner.html.includes('<span class="bt-badge" aria-hidden="true">12</span>'));
+check('a cover without that field gets no corner label', corner.badges === 3, `${corner.badges} labels`);
+check('no corner label unless the list asks for one', corner.offBadges === 0, `${corner.offBadges} labels`);
+check('corner label text is escaped', corner.html.includes('&lt;b&gt;x&lt;/b&gt;</span>') && !/bt-badge[^>]*><b>/.test(corner.html));
+check('a long corner label is clipped', corner.html.includes('>1234567…</span>'));
+check('screen readers hear the corner label', corner.html.includes('aria-label="Twelve (volumes: 12)"'));
+check('the image draws the corner label without changing its size', corner.pngDiffers && corner.sameHeight);
+check('the Reddit post spells the corner label out', corner.md.includes('Twelve (volumes 12)'), corner.md.slice(0, 120));
+check('the corner-label choice survives save and load, and junk is refused', corner.kept === 'volumes' && corner.junk === '', `${corner.kept}/${corner.junk}`);
+
+const cornerPage = await browser.newPage({ viewport: { width: 1280, height: 1100 } });
+await blockExternal(cornerPage);
+cornerPage.setDefaultTimeout(10000);
+await cornerPage.goto(app, { waitUntil: 'domcontentloaded' });
+const cornerFragment = await cornerPage.evaluate(async () => {
+  const sh = await import('../src/io/share.js');
+  const { createDoc } = await import('../src/core/schema.js');
+  return sh.encodeDoc(createDoc({ title: 'Corner picker', items: [
+    { title: 'Read twelve', tier: 'a', pos: 0, fields: { volumes: 12, hours: 127 } },
+  ] }));
+});
+await cornerPage.goto(`${app}#s=${cornerFragment}`, { waitUntil: 'domcontentloaded' });
+await cornerPage.reload({ waitUntil: 'domcontentloaded' });
+await cornerPage.waitForSelector('#board .bt-item');
+const pickerBefore = await cornerPage.evaluate(() => ({
+  options: [...document.querySelectorAll('#badge option')].map((o) => o.value).join(','),
+  badges: document.querySelectorAll('#board .bt-badge').length,
+}));
+await cornerPage.selectOption('#badge', 'volumes');
+const pickerAfter = await cornerPage.evaluate(() => document.querySelector('#board .bt-badge')?.textContent || '');
+await waitUntil(cornerPage, () => JSON.parse(localStorage.getItem('booktier/v1/doc') || '{}').render?.badgeField === 'volumes');
+await cornerPage.reload({ waitUntil: 'domcontentloaded' });
+await cornerPage.waitForSelector('#board .bt-item');
+const pickerReloaded = await cornerPage.evaluate(() => ({
+  value: document.querySelector('#badge').value,
+  badge: document.querySelector('#board .bt-badge')?.textContent || '',
+}));
+check('the editor offers the list’s own fields as corner labels', pickerBefore.options === ',hours,volumes' && pickerBefore.badges === 0, pickerBefore.options);
+check('choosing a corner label shows it on the board', pickerAfter === '12', pickerAfter);
+check('the corner label is still chosen after a reload', pickerReloaded.value === 'volumes' && pickerReloaded.badge === '12', JSON.stringify(pickerReloaded));
+await cornerPage.close();
 const redditUrl = await page.evaluate(() => {
   const url = new URL('https://www.reddit.com/r/litrpg/submit');
   url.searchParams.set('title', 'Tier & list #1 — 100% done');
