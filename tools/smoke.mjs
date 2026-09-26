@@ -612,6 +612,11 @@ const regressions = await page.evaluate(async () => {
     relative: schema.safeImageSrc('../covers/a.jpg'),
     spaced: schema.safeImageSrc('covers/My Book.jpg'),
     quoted: schema.safeImageSrc('covers/a".jpg'),
+    footer: pageHtml(tricky, { links: [
+      { href: '/app/?data=/lists/x.json', label: 'Open <in> the editor' },
+      { href: 'x.json', label: 'JSON', download: 'x.json' },
+      { href: 'javascript:alert(1)', label: 'bad' },
+    ] }).match(/<footer[\s\S]*?<\/footer>/)?.[0] || '',
   };
 });
 check('a title holding a literal \\u003c survives export and re-import', regressions.roundTripTitle === 'literal \\u003c backslash', regressions.roundTripTitle);
@@ -621,6 +626,10 @@ check('a generated id never collides with an existing one', !regressions.mintedC
 check('the documented ../covers/ layout is accepted', regressions.relative === '../covers/a.jpg', regressions.relative);
 check('an ordinary filename with a space is accepted', regressions.spaced === 'covers/My Book.jpg', regressions.spaced);
 check('a cover path with a quote in it is refused', regressions.quoted === '', regressions.quoted);
+check('footer links render as plain, escaped anchors beside the credit',
+  regressions.footer.includes('<a href="/app/?data=/lists/x.json">Open &lt;in&gt; the editor</a>') &&
+  regressions.footer.includes('download="x.json"') && regressions.footer.includes('Made with'), regressions.footer);
+check('a javascript: footer link is dropped', !/javascript:/i.test(regressions.footer), regressions.footer);
 
 const pngCounts = await page.evaluate(async () => {
   const { createDoc } = await import('../src/core/schema.js');
